@@ -18,6 +18,7 @@ const riskColors: Record<string, { bg: string; color: string }> = {
   Mild:     { bg: '#F0FDF4', color: '#10B981' },
   High:     { bg: '#FEF2F2', color: '#EF4444' },
 };
+
 const statusColors: Record<string, { bg: string; color: string }> = {
   Reviewed: { bg: '#F0FDF4', color: '#10B981' },
   Pending:  { bg: '#F3F4F6', color: '#6B7280' },
@@ -37,19 +38,49 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) setUser(JSON.parse(storedUser));
-    else navigate('/login');
+    const syncAuth = async () => {
+      // 1. Check if user is already in local storage (standard login)
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+        return;
+      }
+
+      // 2. If not, check if we arrived here via Google OAuth (check backend session)
+      try {
+        const response = await fetch('http://localhost:8080/api/auth/me', {
+          method: 'GET',
+          // credentials: 'include' is essential to send the JSESSIONID cookie back
+          credentials: 'include', 
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          localStorage.setItem('user', JSON.stringify(userData));
+          setUser(userData);
+        } else {
+          // If no session exists, send back to login
+          navigate('/login');
+        }
+      } catch (err) {
+        console.error("Failed to sync session:", err);
+        navigate('/login');
+      }
+    };
+
+    syncAuth();
   }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
+    // Note: To fully log out from the backend session, you should 
+    // ideally call a backend /logout endpoint here.
     navigate('/login');
   };
 
   if (!user) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F9FAFB', fontFamily: "'Inter', sans-serif" }}>
-      <p style={{ color: '#9CA3AF', fontSize: 14 }}>Loading…</p>
+      <p style={{ color: '#9CA3AF', fontSize: 14 }}>Authenticating...</p>
     </div>
   );
 
@@ -174,7 +205,7 @@ const Dashboard: React.FC = () => {
               </button>
               <div>
                 <h1 style={{ fontSize: 18, fontWeight: 700, color: '#111827', margin: 0 }}>Dashboard</h1>
-                <p style={{ fontSize: 12, color: '#9CA3AF', margin: 0 }}>Friday, March 6, 2026</p>
+                <p style={{ fontSize: 12, color: '#9CA3AF', margin: 0 }}>Wednesday, March 11, 2026</p>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -196,7 +227,7 @@ const Dashboard: React.FC = () => {
             <div style={{ borderRadius: 20, padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden', position: 'relative', background: 'linear-gradient(135deg,#1d4ed8,#2563EB 55%,#7C3AED)' }}>
               <div style={{ position: 'absolute', right: -32, top: -32, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
               <div style={{ position: 'relative', zIndex: 1 }}>
-                <p style={{ color: 'rgba(219,234,254,0.9)', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Good morning 👋</p>
+                <p style={{ color: 'rgba(219,234,254,0.9)', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Good evening 👋</p>
                 <h2 style={{ color: '#fff', fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Welcome back, {firstName}</h2>
                 <p style={{ color: 'rgba(191,219,254,0.8)', fontSize: 13 }}>Here's an overview of your mental health journey</p>
               </div>
@@ -223,7 +254,7 @@ const Dashboard: React.FC = () => {
                     <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 2 }}>Dr. Michael Johnson</p>
                     <p style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>Clinical Psychologist</p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {['📅 March 15, 2024', '🕑 2:00 PM', '⏱ 50 min'].map((tag) => (
+                      {['📅 March 15, 2026', '🕑 2:00 PM', '⏱ 50 min'].map((tag) => (
                         <span key={tag} style={{ fontSize: 12, color: '#6B7280', background: '#F9FAFB', padding: '4px 10px', borderRadius: 8 }}>{tag}</span>
                       ))}
                     </div>
