@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import "../styles/Dashboard.css";
 
 interface UserData {
   userId: string;
@@ -7,65 +8,37 @@ interface UserData {
   role: string;
 }
 
-const assessments = [
-  { date: 'Mar 12, 2024', type: 'PHQ-9 Depression', score: 12, level: 'Moderate', status: 'Reviewed' },
-  { date: 'Mar 8, 2024', type: 'GAD-7 Anxiety', score: 7, level: 'Mild', status: 'Reviewed' },
-  { date: 'Mar 1, 2024', type: 'Stress Assessment', score: 18, level: 'High', status: 'Pending' },
-];
-
-const riskColors: Record<string, { bg: string; color: string }> = {
-  Moderate: { bg: '#FFFBEB', color: '#D97706' },
-  Mild:     { bg: '#F0FDF4', color: '#10B981' },
-  High:     { bg: '#FEF2F2', color: '#EF4444' },
-};
-
-const statusColors: Record<string, { bg: string; color: string }> = {
-  Reviewed: { bg: '#F0FDF4', color: '#10B981' },
-  Pending:  { bg: '#F3F4F6', color: '#6B7280' },
-};
-
-const navItems = [
-  { icon: '🏠', label: 'Dashboard', active: true },
-  { icon: '📅', label: 'Appointments', active: false },
-  { icon: '📋', label: 'Assessments', active: false },
-  { icon: '📈', label: 'Progress', active: false },
-  { icon: '💬', label: 'Messages', active: false },
-];
-
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<UserData | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
+  // ✅ Block back navigation
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // ✅ Auth check
   useEffect(() => {
     const syncAuth = async () => {
-      // 1. Check if user is already in local storage (standard login)
-      const storedUser = localStorage.getItem('user');
+      const storedUser =
+        localStorage.getItem('user') || sessionStorage.getItem('user');
+
       if (storedUser) {
-        setUser(JSON.parse(storedUser));
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch {
+          handleLogout();
+        }
         return;
       }
 
-      // 2. If not, check if we arrived here via Google OAuth (check backend session)
-      try {
-        const response = await fetch('http://localhost:8080/api/auth/me', {
-          method: 'GET',
-          // credentials: 'include' is essential to send the JSESSIONID cookie back
-          credentials: 'include', 
-        });
-
-        if (response.ok) {
-          const userData = await response.json();
-          localStorage.setItem('user', JSON.stringify(userData));
-          setUser(userData);
-        } else {
-          // If no session exists, send back to login
-          navigate('/login');
-        }
-      } catch (err) {
-        console.error("Failed to sync session:", err);
-        navigate('/login');
-      }
+      // No stored user — redirect to login
+      navigate('/login', { replace: true });
     };
 
     syncAuth();
@@ -73,268 +46,285 @@ const Dashboard: React.FC = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('user');
-    // Note: To fully log out from the backend session, you should 
-    // ideally call a backend /logout endpoint here.
-    navigate('/login');
+    localStorage.removeItem('sessionStart');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('sessionStart');
+    sessionStorage.removeItem('oauth_state');
+    navigate('/login', { replace: true });
   };
 
-  if (!user) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F9FAFB', fontFamily: "'Inter', sans-serif" }}>
-      <p style={{ color: '#9CA3AF', fontSize: 14 }}>Authenticating...</p>
-    </div>
-  );
+  if (!user) {
+    return (
+      <div className="dashboard-container">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+          <div>Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
-  const firstName = user.fullName.split(' ')[0];
-  const initial = firstName[0].toUpperCase();
+  const initials = user.fullName
+    ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase()
+    : '?';
 
   return (
-    <>
-      <style>{`
-        html, body, #root { margin: 0; padding: 0; width: 100%; min-height: 100vh; box-sizing: border-box; }
-        *, *::before, *::after { box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #F9FAFB; }
-        a { text-decoration: none; }
-        @media (min-width: 1024px) {
-          .dash-sidebar { transform: translateX(0) !important; position: relative !important; }
-          .dash-overlay { display: none !important; }
-        }
-      `}</style>
-
-      <div style={{ minHeight: '100vh', width: '100vw', display: 'flex', fontFamily: "'Inter', sans-serif", background: '#F9FAFB' }}>
-
-        {/* Mobile overlay */}
-        {sidebarOpen && (
-          <div
-            className="dash-overlay"
-            onClick={() => setSidebarOpen(false)}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 30 }}
-          />
-        )}
-
-        {/* ── Sidebar ── */}
-        <aside
-          className="dash-sidebar"
-          style={{
-            position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40,
-            width: 240, background: '#ffffff', borderRight: '1px solid #F3F4F6',
-            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-            transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-            transition: 'transform 0.2s ease',
-          }}
-        >
-          <div>
-            {/* Logo */}
-            <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid #F3F4F6', marginBottom: 8 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,#2563EB,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>T</span>
-              </div>
-              <span style={{ fontWeight: 700, color: '#111827', fontSize: 16 }}>TheraPea</span>
-            </div>
-
-            {/* Nav */}
-            <nav style={{ padding: '4px 12px' }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '8px 12px', marginBottom: 4 }}>Main</p>
-              {navItems.map((item) => (
-                <a
-                  key={item.label}
-                  href="#"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                    borderRadius: 10, marginBottom: 2, fontSize: 14, fontWeight: item.active ? 600 : 500,
-                    color: item.active ? '#2563EB' : '#6B7280',
-                    background: item.active ? '#EFF6FF' : 'transparent',
-                    transition: 'background 0.1s',
-                  }}
-                  onMouseEnter={(e) => { if (!item.active) e.currentTarget.style.background = '#F9FAFB'; }}
-                  onMouseLeave={(e) => { if (!item.active) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  <span style={{ fontSize: 16 }}>{item.icon}</span>
-                  {item.label}
-                  {item.active && <div style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: '#2563EB' }} />}
-                </a>
-              ))}
-            </nav>
-          </div>
-
-          {/* User + logout */}
-          <div style={{ padding: '12px', borderTop: '1px solid #F3F4F6' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: '#F9FAFB', marginBottom: 4 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2563EB,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#fff', fontWeight: 700, fontSize: 13 }}>
-                {initial}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.fullName}</p>
-                <p style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'capitalize' }}>{user.role.toLowerCase()}</p>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 12px',
-                borderRadius: 10, border: 'none', background: 'transparent', cursor: 'pointer',
-                fontSize: 14, fontWeight: 500, color: '#6B7280', fontFamily: "'Inter', sans-serif",
-                transition: 'background 0.1s, color 0.1s',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#FEF2F2'; e.currentTarget.style.color = '#EF4444'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#6B7280'; }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z" />
+    <div className="dashboard-container">
+      {/* ── Header ── */}
+      <header className="dashboard-header">
+        <div className="header-left">
+          <div className="header-logo">
+            <div className="header-logo-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                <path d="M12 21.7C17.3 17 22 13 22 8.5 22 5.4 19.6 3 16.5 3c-1.8 0-3.6.9-4.5 2.3C11.1 3.9 9.3 3 7.5 3 4.4 3 2 5.4 2 8.5c0 4.5 4.7 8.5 10 13.2z"/>
               </svg>
-              Sign out
-            </button>
+            </div>
+            <span className="header-logo-text">
+              Thera<span>Pea</span>
+            </span>
           </div>
-        </aside>
+        </div>
 
-        {/* ── Main ── */}
-        <main style={{ flex: 1, marginLeft: 0, display: 'flex', flexDirection: 'column', minWidth: 0 }} className="dash-main">
-          <style>{`@media(min-width:1024px){.dash-main{margin-left:240px !important;}}`}</style>
+        <div className="header-right">
+          <div className="notification-bell">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <div className="notification-dot"/>
+          </div>
 
-          {/* Top bar */}
-          <header style={{ position: 'sticky', top: 0, zIndex: 20, background: '#ffffff', borderBottom: '1px solid #F3F4F6', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <button
-                onClick={() => setSidebarOpen(true)}
-                style={{ padding: 6, borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex' }}
-                className="hamburger-btn"
-              >
-                <style>{`@media(min-width:1024px){.hamburger-btn{display:none !important;}}`}</style>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M3 12h18M3 6h18M3 18h18" stroke="#374151" strokeWidth="2" strokeLinecap="round" />
+          <div className="user-menu">
+            <div className="user-avatar">{initials}</div>
+            <div className="user-info">
+              <div className="user-name">{user.fullName}</div>
+              <div className="user-role">{user.role}</div>
+            </div>
+          </div>
+
+          {/* ✅ Logout button */}
+          <button
+            onClick={handleLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'transparent',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '6px 14px',
+              cursor: 'pointer',
+              color: '#64748b',
+              fontSize: '14px',
+              fontWeight: 500,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = '#fee2e2';
+              (e.currentTarget as HTMLButtonElement).style.color = '#dc2626';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#fca5a5';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+              (e.currentTarget as HTMLButtonElement).style.color = '#64748b';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#e2e8f0';
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Logout
+          </button>
+        </div>
+      </header>
+
+      {/* ── Main ── */}
+      <main className="dashboard-main">
+        <div className="welcome-section">
+          <h1 className="welcome-title">
+            Welcome back, {user.fullName ? user.fullName.split(' ')[0] : 'User'}!
+          </h1>
+          <p className="welcome-subtitle">Here's an overview of your mental health journey</p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-header">
+              <div className="stat-icon stat-icon-green">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 11l3 3L22 4"/>
+                  <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
                 </svg>
-              </button>
-              <div>
-                <h1 style={{ fontSize: 18, fontWeight: 700, color: '#111827', margin: 0 }}>Dashboard</h1>
-                <p style={{ fontSize: 12, color: '#9CA3AF', margin: 0 }}>Wednesday, March 11, 2026</p>
               </div>
+              <span className="stat-change stat-change-positive">+12%</span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button style={{ position: 'relative', padding: 8, borderRadius: 10, border: 'none', background: 'transparent', cursor: 'pointer' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#9CA3AF">
-                  <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+            <div className="stat-value">8</div>
+            <div className="stat-label">Sessions Completed</div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-header">
+              <div className="stat-icon stat-icon-purple">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2"/>
+                  <path d="M7 11V7a5 5 0 0110 0v4"/>
                 </svg>
-                <span style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: '50%', background: '#EF4444', border: '1.5px solid #fff' }} />
-              </button>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2563EB,#7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 13 }}>
-                {initial}
               </div>
+              <span className="stat-change stat-change-positive">+5%</span>
             </div>
-          </header>
+            <div className="stat-value">85%</div>
+            <div className="stat-label">Wellness Score</div>
+          </div>
 
-          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-            {/* Welcome banner */}
-            <div style={{ borderRadius: 20, padding: '28px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden', position: 'relative', background: 'linear-gradient(135deg,#1d4ed8,#2563EB 55%,#7C3AED)' }}>
-              <div style={{ position: 'absolute', right: -32, top: -32, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <p style={{ color: 'rgba(219,234,254,0.9)', fontSize: 13, fontWeight: 500, marginBottom: 4 }}>Good evening 👋</p>
-                <h2 style={{ color: '#fff', fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Welcome back, {firstName}</h2>
-                <p style={{ color: 'rgba(191,219,254,0.8)', fontSize: 13 }}>Here's an overview of your mental health journey</p>
+          <div className="stat-card">
+            <div className="stat-header">
+              <div className="stat-icon stat-icon-red">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .98h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.84a16 16 0 006.29 6.29l1.22-1.24a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.16v.76z"/>
+                </svg>
               </div>
-              <div style={{ display: 'flex', gap: 32, position: 'relative', zIndex: 1 }}>
-                {[{ label: 'Sessions', value: '12' }, { label: 'Streak', value: '7d' }, { label: 'Score', value: '72%' }].map((s) => (
-                  <div key={s.label} style={{ textAlign: 'center' }}>
-                    <p style={{ color: '#fff', fontWeight: 700, fontSize: 20, marginBottom: 2 }}>{s.value}</p>
-                    <p style={{ color: 'rgba(191,219,254,0.75)', fontSize: 12 }}>{s.label}</p>
-                  </div>
-                ))}
-              </div>
+              <span className="stat-change stat-change-negative">-8%</span>
             </div>
+            <div className="stat-value">3</div>
+            <div className="stat-label">Upcoming Sessions</div>
+          </div>
 
-            {/* Next session */}
-            <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #F3F4F6', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Next Therapy Session</h3>
-                <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20, background: '#DBEAFE', color: '#2563EB' }}>Upcoming</span>
+          <div className="stat-card">
+            <div className="stat-header">
+              <div className="stat-icon stat-icon-blue">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 010 7.75"/>
+                </svg>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 16, background: 'linear-gradient(135deg,#7C3AED,#2563EB)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>MJ</div>
-                  <div>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 2 }}>Dr. Michael Johnson</p>
-                    <p style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 8 }}>Clinical Psychologist</p>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {['📅 March 15, 2026', '🕑 2:00 PM', '⏱ 50 min'].map((tag) => (
-                        <span key={tag} style={{ fontSize: 12, color: '#6B7280', background: '#F9FAFB', padding: '4px 10px', borderRadius: 8 }}>{tag}</span>
-                      ))}
-                    </div>
+              <span className="stat-change stat-change-positive">+2</span>
+            </div>
+            <div className="stat-value">4</div>
+            <div className="stat-label">Care Team</div>
+          </div>
+        </div>
+
+        {/* Content Grid */}
+        <div className="content-grid">
+          {/* Upcoming Sessions */}
+          <section className="sessions-section">
+            <div className="section-header">
+              <h2 className="section-title">Upcoming Sessions</h2>
+              <a href="#" className="view-all-link">View All</a>
+            </div>
+            <div className="session-list">
+              <div className="session-item">
+                <div className="session-time">
+                  <div className="session-date">TODAY</div>
+                  <div className="session-hour">3:00 PM</div>
+                </div>
+                <div className="session-info">
+                  <div className="session-provider">Dr. Sarah Johnson</div>
+                  <div className="session-type">Individual Therapy Session</div>
+                  <div className="session-tags">
+                    <span className="session-tag tag-green">Anxiety</span>
+                    <span className="session-tag tag-purple">Stress Management</span>
                   </div>
                 </div>
-                <button
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 12, border: 'none',
-                    background: '#2563EB', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                    boxShadow: '0 4px 14px rgba(37,99,235,0.3)', fontFamily: "'Inter', sans-serif",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#1d4ed8'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#2563EB'; }}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="white">
-                    <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
-                  </svg>
-                  Join Video Call
-                </button>
+                <div className="session-action">
+                  <button className="join-button">Join Session</button>
+                </div>
+              </div>
+
+              <div className="session-item">
+                <div className="session-time">
+                  <div className="session-date">FRI</div>
+                  <div className="session-hour">2:00 PM</div>
+                </div>
+                <div className="session-info">
+                  <div className="session-provider">Dr. Michael Chen</div>
+                  <div className="session-type">Medication Review</div>
+                  <div className="session-tags">
+                    <span className="session-tag tag-purple">Psychiatry</span>
+                  </div>
+                </div>
+                <div className="session-action">
+                  <button className="join-button">Join Session</button>
+                </div>
               </div>
             </div>
+          </section>
 
-            {/* Assessments table */}
-            <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #F3F4F6', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-              <div style={{ padding: '20px 24px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Recent Triage Assessments</h3>
-                <button style={{ fontSize: 12, fontWeight: 600, color: '#2563EB', background: '#EFF6FF', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: "'Inter', sans-serif" }}>
-                  View all
-                </button>
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                  <thead>
-                    <tr style={{ background: '#F9FAFB' }}>
-                      {['Date', 'Assessment Type', 'Risk Score', 'Status', ''].map((h) => (
-                        <th key={h} style={{ padding: '12px 24px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {assessments.map((a, i) => (
-                      <tr
-                        key={i}
-                        style={{ borderTop: '1px solid #F9FAFB' }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = '#FAFAFA'; }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'; }}
-                      >
-                        <td style={{ padding: '16px 24px', color: '#6B7280', whiteSpace: 'nowrap' }}>{a.date}</td>
-                        <td style={{ padding: '16px 24px', fontWeight: 600, color: '#111827', whiteSpace: 'nowrap' }}>{a.type}</td>
-                        <td style={{ padding: '16px 24px' }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20, background: riskColors[a.level].bg, color: riskColors[a.level].color, whiteSpace: 'nowrap' }}>
-                            {a.level} ({a.score})
-                          </span>
-                        </td>
-                        <td style={{ padding: '16px 24px' }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20, background: statusColors[a.status].bg, color: statusColors[a.status].color }}>
-                            {a.status}
-                          </span>
-                        </td>
-                        <td style={{ padding: '16px 24px' }}>
-                          <button style={{ padding: 6, borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = '#F3F4F6'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                          >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="#9CA3AF">
-                              <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+          {/* Wellness Progress */}
+          <section className="progress-section">
+            <div className="section-header">
+              <h2 className="section-title">Wellness Progress</h2>
+              <a href="#" className="view-all-link">View Details</a>
             </div>
+            <div className="progress-list">
+              {[
+                { label: 'Mood',    value: 72, cls: 'progress-mood'    },
+                { label: 'Sleep',   value: 58, cls: 'progress-sleep'   },
+                { label: 'Anxiety', value: 45, cls: 'progress-anxiety' },
+                { label: 'Stress',  value: 38, cls: 'progress-stress'  },
+              ].map(({ label, value, cls }) => (
+                <div key={label} className="progress-item">
+                  <div className="progress-header">
+                    <span className="progress-label">{label}</span>
+                    <span className={`progress-value ${cls}`}>{value}%</span>
+                  </div>
+                  <div className="progress-bar">
+                    <div className={`progress-fill ${cls}`} style={{ width: `${value}%` }}/>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
 
+        {/* Quick Actions */}
+        <section className="actions-section">
+          <div className="section-header">
+            <h2 className="section-title">Quick Actions</h2>
           </div>
-        </main>
-      </div>
-    </>
+          <div className="actions-grid">
+            {[
+              {
+                title: 'Take Assessment', desc: 'Complete your weekly check-in',
+                cls: 'action-icon-green',
+                icon: <><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></>
+              },
+              {
+                title: 'Book Session', desc: 'Schedule your next appointment',
+                cls: 'action-icon-purple',
+                icon: <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></>
+              },
+              {
+                title: 'Find Provider', desc: 'Browse our care team',
+                cls: 'action-icon-green',
+                icon: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>
+              },
+              {
+                title: 'View Resources', desc: 'Access self-help materials',
+                cls: 'action-icon-purple',
+                icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></>
+              },
+            ].map(({ title, desc, cls, icon }) => (
+              <button key={title} className="action-button">
+                <div className={`action-icon ${cls}`}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    {icon}
+                  </svg>
+                </div>
+                <div className="action-content">
+                  <div className="action-title">{title}</div>
+                  <div className="action-description">{desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
   );
 };
 
