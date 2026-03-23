@@ -41,8 +41,19 @@ public class UserService {
         return user;
     }
 
+    public UserEntity saveUser(UserEntity user) {
+        return userRepository.save(user);
+    }
+
     public UserEntity findByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+    }
+
+    /**
+     * Get user by email without throwing exception - returns null if not found
+     */
+    public UserEntity getUserByEmail(String email) {
+        return userRepository.findByEmail(email).orElse(null);
     }
 }
