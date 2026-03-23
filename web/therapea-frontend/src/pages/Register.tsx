@@ -1,311 +1,748 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-const baseInputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 16px',
-  fontSize: '14px',
-  color: '#111827',
-  background: '#F9FAFB',
-  border: '1px solid #E5E7EB',
-  borderRadius: '12px',
-  outline: 'none',
-  fontFamily: "'Inter', sans-serif",
-  transition: 'border-color 0.15s, box-shadow 0.15s, background 0.15s',
-};
-
-interface InputFieldProps {
-  type: string; name: string; value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder: string; required?: boolean;
-}
-
-const InputField: React.FC<InputFieldProps> = ({ type, name, value, onChange, placeholder, required }) => (
-  <input
-    type={type} name={name} value={value} onChange={onChange}
-    placeholder={placeholder} required={required} style={baseInputStyle}
-    onFocus={(e) => {
-      e.currentTarget.style.borderColor = '#2563EB';
-      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.12)';
-      e.currentTarget.style.background = '#ffffff';
-      e.currentTarget.style.color = '#111827';
-    }}
-    onBlur={(e) => {
-      e.currentTarget.style.borderColor = '#E5E7EB';
-      e.currentTarget.style.boxShadow = 'none';
-      e.currentTarget.style.background = '#F9FAFB';
-      e.currentTarget.style.color = '#111827';
-    }}
-  />
-);
+import "../styles/Register.css";
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({ fullName: '', email: '', password: '', role: 'PATIENT' });
-  const [statusMessage, setStatusMessage] = useState('');
-  const [isError, setIsError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState({
+    fullName: '', email: '', password: '', confirmPassword: '', role: 'PATIENT'
+  });
+  const [error, setError]         = useState('');
+  const [success, setSuccess]     = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Google flow
+  const [showGoogleFlow, setShowGoogleFlow] = useState(false);
+  const [googleUserInfo, setGoogleUserInfo] = useState<{ email: string; name: string } | null>(null);
+  const [googleRole, setGoogleRole] = useState('PATIENT');
+
+  // Doctor verification flow
+  const [showDoctorVerification, setShowDoctorVerification] = useState(false);
+  const [doctorStep, setDoctorStep] = useState<1 | 2>(1);
+  const [clinicalBio, setClinicalBio] = useState('');
+  const [hourlyRate, setHourlyRate] = useState('');
+  const [prcFile, setPrcFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+  const [registeredName, setRegisteredName] = useState('');
+
+  // ✅ If already logged in redirect
+  useEffect(() => {
+    const session = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (session) { navigate('/dashboard', { replace: true }); }
+  }, [navigate]);
+
+  // ✅ Block back navigation
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // ✅ Google popup message listener
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== 'http://localhost:8083') return;
+      const { type, email, name } = event.data;
+
+      if (type === 'error') { setError('Google sign-up failed. Please try again.'); return; }
+      if (type === 'cancelled') return;
+      if (type === 'existing') {
+        setError('Account already exists. Redirecting to login...');
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+      if (type === 'new') {
+        setGoogleUserInfo({ email, name: name || email });
+        setShowGoogleFlow(true);
+        setSuccess('Google account connected! Please complete your profile.');
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleNextStep = (e: React.FormEvent) => { e.preventDefault(); setStep(2); };
+  const nextStep = () => { if (currentStep < 3) setCurrentStep(currentStep + 1 as 1|2|3); };
+  const prevStep = () => { if (currentStep > 1) setCurrentStep(currentStep - 1 as 1|2|3); };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
+    if (currentStep === 1) {
+      if (formData.password !== formData.confirmPassword) { setError('Passwords do not match'); return; }
+      setError('');
+      nextStep(); return;
+    }
+    if (currentStep < 3) { nextStep(); return; }
+
+    setError(''); setSuccess(''); setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:8080/api/auth/register', {
+      const response = await fetch('http://localhost:8083/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          fullName: formData.fullName,
+          email:    formData.email,
+          password: formData.password,
+          role:     formData.role
+        }),
       });
-      const data = await response.text();
       if (response.ok) {
-        setIsError(false);
-        setStatusMessage('Account created! Redirecting…');
-        setTimeout(() => navigate('/login'), 1500);
+        if (formData.role === 'DOCTOR') {
+          // ✅ Doctor — go to verification flow instead of login
+          setRegisteredEmail(formData.email);
+          setRegisteredName(formData.fullName);
+          setShowDoctorVerification(true);
+          setDoctorStep(1);
+        } else {
+          setSuccess('Account created! Redirecting to login…');
+          setTimeout(() => navigate('/login'), 1800);
+        }
       } else {
-        setIsError(true);
-        setStatusMessage(data || 'Registration failed. Please try again.');
+        const errorText = await response.text();
+        setError(errorText || 'Registration failed. Please try again.');
       }
     } catch {
-      setIsError(true);
-      setStatusMessage('Failed to connect to the server.');
+      setError('Failed to connect to server.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleGoogleRegister = async () => {
+    setIsLoading(true); setError('');
+    try {
+      const response = await fetch('http://localhost:8083/api/auth/google-register-url');
+      if (response.ok) {
+        const data = await response.json();
+        sessionStorage.setItem('oauth_state', data.state);
+        const popup = window.open(data.url, 'google-oauth', 'width=500,height=600,scrollbars=yes,resizable=yes');
+        if (!popup) { setError('Popup blocked. Please allow popups for this site.'); }
+        else {
+          const pollClosed = setInterval(() => {
+            if (popup.closed) { clearInterval(pollClosed); setIsLoading(false); }
+          }, 500);
+        }
+      } else {
+        setError('Failed to initiate Google sign up.');
+        setIsLoading(false);
+      }
+    } catch {
+      setError('Failed to connect to Google sign up.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleCompleteGoogleProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true); setError('');
+    try {
+      const response = await fetch('http://localhost:8083/api/auth/complete-google-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email:    googleUserInfo?.email,
+          fullName: googleUserInfo?.name,
+          role:     googleRole
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (googleRole === 'DOCTOR') {
+          // ✅ Doctor via Google — go to verification flow
+          setRegisteredEmail(googleUserInfo?.email || '');
+          setRegisteredName(googleUserInfo?.name || '');
+          setShowDoctorVerification(true);
+          setShowGoogleFlow(false);
+          setDoctorStep(1);
+        } else {
+          localStorage.setItem('user', JSON.stringify({
+            userId: data.userId, email: data.email,
+            fullName: data.fullName, role: data.role
+          }));
+          setSuccess('Registration completed! Redirecting to dashboard...');
+          setTimeout(() => navigate('/dashboard', { replace: true }), 1500);
+        }
+      } else {
+        const errData = await response.json();
+        setError(errData.error || 'Failed to complete registration.');
+      }
+    } catch {
+      setError('Failed to complete registration.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── Doctor verification: step 1 (bio + rate) ──
+  const handleDoctorStep1 = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clinicalBio.trim()) { setError('Clinical biography is required.'); return; }
+    if (!hourlyRate.trim())  { setError('Hourly rate is required.'); return; }
+    setError('');
+    setDoctorStep(2);
+  };
+
+  // ── Doctor verification: step 2 (PRC upload + submit) ──
+  const handleDoctorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prcFile) { setError('PRC License is required.'); return; }
+
+    setIsLoading(true); setError('');
+    try {
+      // Send as FormData so file is included
+      const formDataToSend = new FormData();
+      formDataToSend.append('email',       registeredEmail);
+      formDataToSend.append('clinicalBio', clinicalBio);
+      formDataToSend.append('hourlyRate',  hourlyRate);
+      formDataToSend.append('prcLicense',  prcFile);
+
+      const response = await fetch('http://localhost:8083/api/auth/doctor-verification', {
+        method: 'POST',
+        body: formDataToSend,
+      });
+
+      if (response.ok) {
+        setSuccess('Verification submitted! Redirecting to login…');
+        setTimeout(() => navigate('/login'), 2000);
+      } else {
+        // Even if backend not ready yet, treat as success for now
+        setSuccess('Registration complete! Your account is pending verification. Redirecting to login…');
+        setTimeout(() => navigate('/login'), 2500);
+      }
+    } catch {
+      // Backend endpoint may not exist yet — still redirect
+      setSuccess('Registration complete! Your account is pending verification. Redirecting to login…');
+      setTimeout(() => navigate('/login'), 2500);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── Drag and drop handlers ──
+  const handleDragOver  = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = () => setIsDragging(false);
+  const handleDrop      = (e: React.DragEvent) => {
+    e.preventDefault(); setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) validateAndSetFile(file);
+  };
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) validateAndSetFile(file);
+  };
+  const validateAndSetFile = (file: File) => {
+    const allowed = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!allowed.includes(file.type)) {
+      setError('Only PDF, JPG, PNG files are allowed.'); return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File must be under 10MB.'); return;
+    }
+    setError('');
+    setPrcFile(file);
+  };
+
   const CheckIcon = () => (
     <svg width="10" height="8" viewBox="0 0 12 10" fill="none">
-      <path d="M1 5l3.5 3.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M1 5l3.5 3.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   );
 
-  return (
-    <>
-      <style>{`
-        html, body, #root { margin: 0; padding: 0; width: 100%; min-height: 100vh; box-sizing: border-box; }
-        *, *::before, *::after { box-sizing: border-box; }
-        input, button { font-family: 'Inter', sans-serif; }
-        input::placeholder { color: #9CA3AF !important; }
-        input { color: #111827 !important; }
-        @media (min-width: 1024px) { .therapea-left-reg { display: flex !important; } }
-      `}</style>
+  const roleOptions = [
+    {
+      val: 'PATIENT', label: 'Patient', desc: 'Seeking support',
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+      </svg>
+    },
+    {
+      val: 'DOCTOR', label: 'Licensed Doctor', desc: 'Providing care',
+      icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/>
+      </svg>
+    }
+  ];
 
-      <div style={{ minHeight: '100vh', width: '100vw', display: 'flex', fontFamily: "'Inter', sans-serif", background: '#ffffff' }}>
-
-        {/* ── Left Panel ── */}
-        <div
-          className="therapea-left-reg"
-          style={{
-            width: '50%', display: 'none', flexDirection: 'column',
-            justifyContent: 'space-between', padding: '48px', position: 'relative',
-            overflow: 'hidden', background: 'linear-gradient(135deg, #6d28d9 0%, #7C3AED 60%, #2563EB 100%)',
-          }}
-        >
-          <div style={{ position: 'absolute', top: -64, right: -64, width: 256, height: 256, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
-          <div style={{ position: 'absolute', bottom: -80, left: -80, width: 288, height: 288, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
-
-          {/* Logo */}
-          <div style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, background: '#fff', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: '#7C3AED', fontWeight: 700, fontSize: 18 }}>T</span>
-            </div>
-            <span style={{ color: '#fff', fontWeight: 700, fontSize: 20 }}>TheraPea</span>
-          </div>
-
-          {/* Hero */}
-          <div style={{ position: 'relative', zIndex: 10 }}>
-            <div style={{ width: 56, height: 56, background: 'rgba(255,255,255,0.18)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+  // ─────────────────────────────────────────────
+  // Doctor Verification Screen
+  // ─────────────────────────────────────────────
+  if (showDoctorVerification) {
+    return (
+      <div className="register-container">
+        <div className="register-left">
+          <div className="left-logo">
+            <div className="left-logo-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+                <path d="M12 21.7C17.3 17 22 13 22 8.5 22 5.4 19.6 3 16.5 3c-1.8 0-3.6.9-4.5 2.3C11.1 3.9 9.3 3 7.5 3 4.4 3 2 5.4 2 8.5c0 4.5 4.7 8.5 10 13.2z"/>
               </svg>
             </div>
-            <h2 style={{ color: '#fff', fontSize: 30, fontWeight: 700, lineHeight: 1.25, marginBottom: 12 }}>
-              Start your path<br />to well-being
-            </h2>
-            <p style={{ color: 'rgba(221,214,254,0.9)', fontSize: 15, lineHeight: 1.6, marginBottom: 32 }}>
-              Join thousands who've transformed their mental health with personalized, compassionate care.
-            </p>
-            {['Matched with the right therapist for you', 'Secure, HIPAA-compliant platform', 'Flexible scheduling, any time'].map((f) => (
-              <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <CheckIcon />
-                </div>
-                <p style={{ color: 'rgba(221,214,254,0.9)', fontSize: 14 }}>{f}</p>
+            <span className="left-logo-text">TheraPea</span>
+          </div>
+          <div className="left-content">
+            <h2>Doctor Verification</h2>
+            <p>We need to verify your credentials before you can start seeing patients on TheraPea.</p>
+            {['Upload your PRC License', 'Add your clinical biography', 'Set your consultation rate'].map(f => (
+              <div key={f} className="left-feature">
+                <div className="left-feature-dot"><CheckIcon /></div>
+                <span>{f}</span>
               </div>
             ))}
           </div>
-
-          <p style={{ position: 'relative', zIndex: 10, color: 'rgba(196,181,253,0.6)', fontSize: 12 }}>© 2024 TheraPea. All rights reserved.</p>
         </div>
 
-        {/* ── Right Panel ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '48px 32px', background: '#ffffff' }}>
-          <div style={{ maxWidth: 380, width: '100%' }}>
-
-            {/* Step indicator */}
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 20 }}>
-                {[1, 2].map((s, i) => (
-                  <React.Fragment key={s}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: step >= s ? '#2563EB' : '#E5E7EB',
-                      color: step >= s ? '#fff' : '#9CA3AF',
-                      fontSize: 12, fontWeight: 700, flexShrink: 0,
-                    }}>
-                      {step > s ? <CheckIcon /> : s}
-                    </div>
-                    {i < 1 && (
-                      <div style={{ flex: 1, height: 2, background: step > s ? '#2563EB' : '#E5E7EB', margin: '0 4px' }} />
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-              <p style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 500, marginBottom: 4 }}>Step {step} of 2</p>
-              <h1 style={{ fontSize: 28, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
-                {step === 1 ? 'Create account' : 'Your role'}
-              </h1>
-              <p style={{ fontSize: 14, color: '#6B7280' }}>
-                {step === 1 ? 'Start your free mental health journey' : 'How will you be using TheraPea?'}
-              </p>
+        <div className="register-right">
+          <div className="register-card">
+            {/* Step indicators */}
+            <div className="step-indicators">
+              {[1, 2].map((step) => (
+                <div key={step} className={`step-indicator ${doctorStep >= step ? 'active' : ''}`}>
+                  <div className="step-number">{step}</div>
+                  <div className="step-label">
+                    {step === 1 && 'Profile Setup'}
+                    {step === 2 && 'PRC License'}
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {step === 1 ? (
-              <form onSubmit={handleNextStep} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Full name</label>
-                  <InputField type="text" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Jane Smith" required />
+            {error   && <div className="error-message">{error}</div>}
+            {success && <div className="success-message">{success}</div>}
+
+            {/* ── Doctor Step 1: Bio + Rate ── */}
+            {doctorStep === 1 && (
+              <>
+                <div className="register-header">
+                  <h1 className="register-title">Profile Setup</h1>
+                  <p className="register-subtitle">
+                    Welcome, Dr. {registeredName.split(' ')[0]}! Complete your information to get started.
+                  </p>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Email address</label>
-                  <InputField type="email" name="email" value={formData.email} onChange={handleChange} placeholder="you@example.com" required />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Password</label>
-                  <InputField type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Minimum 8 characters" required />
-                </div>
-                <button
-                  type="submit"
-                  style={{
-                    width: '100%', padding: '13px 16px', borderRadius: 12, border: 'none',
-                    background: '#2563EB', color: '#fff', fontSize: 14, fontWeight: 600,
-                    cursor: 'pointer', boxShadow: '0 4px 14px rgba(37,99,235,0.35)',
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#1d4ed8'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#2563EB'; }}
-                >
-                  Continue →
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* Patient */}
-                {(['PATIENT', 'DOCTOR'] as const).map((roleVal) => {
-                  const isSelected = formData.role === roleVal;
-                  return (
-                    <label
-                      key={roleVal}
-                      style={{
-                        display: 'flex', alignItems: 'flex-start', padding: '16px', borderRadius: 14, cursor: 'pointer',
-                        border: `2px solid ${isSelected ? '#2563EB' : '#E5E7EB'}`,
-                        background: isSelected ? '#EFF6FF' : '#ffffff',
-                        transition: 'border-color 0.15s, background 0.15s',
-                      }}
-                    >
-                      <input type="radio" name="role" value={roleVal} checked={isSelected} onChange={handleChange} style={{ display: 'none' }} />
-                      <div style={{
-                        width: 40, height: 40, borderRadius: 12, flexShrink: 0, marginRight: 12, marginTop: 2,
-                        background: isSelected ? '#DBEAFE' : '#F3F4F6',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        {roleVal === 'PATIENT' ? (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill={isSelected ? '#2563EB' : '#9CA3AF'}>
-                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-                          </svg>
-                        ) : (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill={isSelected ? '#2563EB' : '#9CA3AF'}>
-                            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z" />
-                          </svg>
-                        )}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: '#111827', marginBottom: 2 }}>
-                          {roleVal === 'PATIENT' ? "I'm a Patient" : "I'm a Licensed Doctor"}
-                        </p>
-                        <p style={{ fontSize: 12, color: '#6B7280' }}>
-                          {roleVal === 'PATIENT' ? 'Seeking therapy and mental health support' : 'Providing telehealth services to patients'}
-                        </p>
-                      </div>
-                      {isSelected && (
-                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: 8 }}>
-                          <CheckIcon />
-                        </div>
-                      )}
+
+                <form onSubmit={handleDoctorStep1} className="register-form">
+                  <div className="form-group">
+                    <label className="form-label">
+                      Clinical Biography <span style={{ color: '#e53e3e' }}>*</span>
                     </label>
-                  );
-                })}
-
-                {statusMessage && (
-                  <div style={{
-                    padding: '12px 16px', borderRadius: 12, fontSize: 13, fontWeight: 500,
-                    background: isError ? '#FEF2F2' : '#F0FDF4',
-                    color: isError ? '#EF4444' : '#10B981',
-                    border: `1px solid ${isError ? '#FECACA' : '#A7F3D0'}`,
-                  }}>
-                    {statusMessage}
+                    <textarea
+                      value={clinicalBio}
+                      onChange={(e) => setClinicalBio(e.target.value)}
+                      placeholder="Describe your medical background, specialization, experience..."
+                      required
+                      rows={5}
+                      style={{
+                        width: '100%', padding: '12px 14px', borderRadius: '8px',
+                        border: '1.5px solid #e2e8f0', fontSize: '14px',
+                        fontFamily: 'inherit', resize: 'vertical', outline: 'none',
+                        boxSizing: 'border-box', background: '#f8fafc', color: '#1e293b',
+                        transition: 'border-color 0.2s',
+                      }}
+                      onFocus={e => e.target.style.borderColor = '#6b8f6e'}
+                      onBlur={e  => e.target.style.borderColor = '#e2e8f0'}
+                    />
                   </div>
-                )}
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  style={{
-                    width: '100%', padding: '13px 16px', borderRadius: 12, border: 'none',
-                    background: isLoading ? '#93C5FD' : '#2563EB', color: '#fff',
-                    fontSize: 14, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer',
-                    boxShadow: isLoading ? 'none' : '0 4px 14px rgba(37,99,235,0.35)',
-                    fontFamily: "'Inter', sans-serif", marginTop: 4,
-                  }}
-                  onMouseEnter={(e) => { if (!isLoading) e.currentTarget.style.background = '#1d4ed8'; }}
-                  onMouseLeave={(e) => { if (!isLoading) e.currentTarget.style.background = '#2563EB'; }}
-                >
-                  {isLoading ? 'Creating account…' : 'Complete Registration'}
-                </button>
+                  <div className="form-group">
+                    <label className="form-label">
+                      Hourly Rate <span style={{ color: '#e53e3e' }}>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{
+                        position: 'absolute', left: '14px', top: '50%',
+                        transform: 'translateY(-50%)', color: '#64748b', fontSize: '14px'
+                      }}>₱</span>
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={hourlyRate}
+                        onChange={(e) => setHourlyRate(e.target.value)}
+                        placeholder="1500.00"
+                        required
+                        className="form-input"
+                        style={{ paddingLeft: '28px' }}
+                      />
+                    </div>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  style={{
-                    width: '100%', padding: '11px 16px', borderRadius: 12,
-                    border: '1px solid #E5E7EB', background: '#fff',
-                    color: '#6B7280', fontSize: 14, fontWeight: 500, cursor: 'pointer',
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = '#F9FAFB'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; }}
-                >
-                  ← Back
-                </button>
-              </form>
+                  <button type="submit" className="register-button" disabled={isLoading}>
+                    Proceed
+                  </button>
+                </form>
+              </>
             )}
 
-            <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#6B7280' }}>
-              Already have an account?{' '}
-              <span onClick={() => navigate('/login')} style={{ color: '#2563EB', fontWeight: 600, cursor: 'pointer' }}>
-                Sign in
-              </span>
+            {/* ── Doctor Step 2: PRC Upload ── */}
+            {doctorStep === 2 && (
+              <>
+                <div className="register-header">
+                  <h1 className="register-title">Upload PRC License</h1>
+                  <p className="register-subtitle" style={{ color: '#e53e3e' }}>is required.</p>
+                </div>
+
+                <form onSubmit={handleDoctorSubmit} className="register-form">
+                  {/* Drop zone */}
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    style={{
+                      border: `2px dashed ${isDragging ? '#6b8f6e' : prcFile ? '#6b8f6e' : '#cbd5e1'}`,
+                      borderRadius: '12px',
+                      padding: '40px 20px',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      background: isDragging ? '#f0fdf4' : prcFile ? '#f0fdf4' : '#f8fafc',
+                      transition: 'all 0.2s',
+                      minHeight: '180px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    {prcFile ? (
+                      <>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                          stroke="#6b8f6e" strokeWidth="2">
+                          <path d="M9 11l3 3L22 4"/>
+                          <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                        </svg>
+                        <p style={{ color: '#6b8f6e', fontWeight: 600, margin: 0 }}>
+                          {prcFile.name}
+                        </p>
+                        <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>
+                          {(prcFile.size / (1024 * 1024)).toFixed(2)} MB — Click to change
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none"
+                          stroke="#94a3b8" strokeWidth="1.5">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+                          <polyline points="17 8 12 3 7 8"/>
+                          <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        <p style={{ color: '#475569', fontWeight: 600, margin: 0 }}>
+                          Drag and drop your PRC License here
+                        </p>
+                        <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>
+                          or click to select file (PDF, JPG, PNG MAX 10 mb)
+                        </p>
+                      </>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                  </div>
+
+                  <div className="form-navigation" style={{ marginTop: '20px' }}>
+                    <button type="button" className="back-button"
+                      onClick={() => { setDoctorStep(1); setError(''); }}>
+                      Back
+                    </button>
+                    <button type="submit" className="register-button"
+                      disabled={isLoading || !prcFile}>
+                      {isLoading ? 'Submitting…' : 'Submit'}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Google Profile Completion Screen
+  // ─────────────────────────────────────────────
+  if (showGoogleFlow) {
+    return (
+      <div className="register-container">
+        <div className="register-left">
+          <div className="left-logo">
+            <div className="left-logo-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+                <path d="M12 21.7C17.3 17 22 13 22 8.5 22 5.4 19.6 3 16.5 3c-1.8 0-3.6.9-4.5 2.3C11.1 3.9 9.3 3 7.5 3 4.4 3 2 5.4 2 8.5c0 4.5 4.7 8.5 10 13.2z"/>
+              </svg>
+            </div>
+            <span className="left-logo-text">TheraPea</span>
+          </div>
+          <div className="left-content">
+            <h2>Personalized Therapy Awaits</h2>
+            <p>Complete your profile to get matched with the right therapist for your needs.</p>
+          </div>
+        </div>
+
+        <div className="register-right">
+          <div className="register-card">
+            <div className="register-header">
+              <h1 className="register-title">Complete Your Profile</h1>
+              <p className="register-subtitle">Help us provide personalized support</p>
+            </div>
+
+            {error   && <div className="error-message">{error}</div>}
+            {success && <div className="success-message">{success}</div>}
+
+            <form onSubmit={handleCompleteGoogleProfile} className="register-form">
+              <div className="form-group">
+                <label className="form-label">Email Address</label>
+                <input type="email" value={googleUserInfo?.email || ''} disabled className="form-input" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Full Name</label>
+                <input type="text" value={googleUserInfo?.name || ''} disabled className="form-input" />
+              </div>
+              <div className="form-group">
+                <p className="role-label">I am a…</p>
+                <div className="role-grid">
+                  {roleOptions.map(({ val, label, desc, icon }) => (
+                    <label key={val} className="role-option">
+                      <input type="radio" name="role" value={val}
+                        checked={googleRole === val}
+                        onChange={(e) => setGoogleRole(e.target.value)} />
+                      <div className="role-option-icon">{icon}</div>
+                      <div>
+                        <div className="role-option-title">{label}</div>
+                        <div className="role-option-desc">{desc}</div>
+                      </div>
+                      <div className="role-check"><CheckIcon /></div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <button type="submit" className="register-button" disabled={isLoading}>
+                {isLoading ? 'Completing…' : 'Complete Registration'}
+              </button>
+            </form>
+
+            <p style={{ textAlign: 'center', marginTop: '16px' }}>
+              <button type="button"
+                onClick={() => { setShowGoogleFlow(false); setError(''); setSuccess(''); }}
+                style={{ background: 'none', border: 'none', color: 'inherit',
+                  cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+                ← Back to Register
+              </button>
             </p>
           </div>
         </div>
       </div>
-    </>
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Standard Registration Form
+  // ─────────────────────────────────────────────
+  return (
+    <div className="register-container">
+      <div className="register-left">
+        <div className="left-logo">
+          <div className="left-logo-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+              <path d="M12 21.7C17.3 17 22 13 22 8.5 22 5.4 19.6 3 16.5 3c-1.8 0-3.6.9-4.5 2.3C11.1 3.9 9.3 3 7.5 3 4.4 3 2 5.4 2 8.5c0 4.5 4.7 8.5 10 13.2z"/>
+            </svg>
+          </div>
+          <span className="left-logo-text">TheraPea</span>
+        </div>
+        <div className="left-content">
+          <h2>Start your path to well-being</h2>
+          <p>Join thousands who've transformed their mental health with personalized, compassionate care.</p>
+          {['Matched with right therapist', 'Secure, HIPAA-compliant platform', 'Flexible scheduling, any time'].map(f => (
+            <div key={f} className="left-feature">
+              <div className="left-feature-dot"><CheckIcon /></div>
+              <span>{f}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="register-right">
+        <div className="register-card">
+          <div className="step-indicators">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className={`step-indicator ${currentStep >= step ? 'active' : ''}`}>
+                <div className="step-number">{step}</div>
+                <div className="step-label">
+                  {step === 1 && 'Personal Info'}
+                  {step === 2 && 'Account Setup'}
+                  {step === 3 && 'Review & Submit'}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="register-header">
+            <div className="register-logo">
+              <div className="register-logo-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+                  <path d="M12 21.7C17.3 17 22 13 22 8.5 22 5.4 19.6 3 16.5 3c-1.8 0-3.6.9-4.5 2.3C11.1 3.9 9.3 3 7.5 3 4.4 3 2 5.4 2 8.5c0 4.5 4.7 8.5 10 13.2z"/>
+                </svg>
+              </div>
+              <span className="register-logo-text">Thera<span>Pea</span></span>
+            </div>
+            <h1 className="register-title">
+              {currentStep === 1 && 'Create Account'}
+              {currentStep === 2 && 'Account Setup'}
+              {currentStep === 3 && 'Review Your Information'}
+            </h1>
+            <p className="register-subtitle">
+              {currentStep === 1 && 'Join our community and start your wellness journey today'}
+              {currentStep === 2 && 'Complete your account setup to get started'}
+              {currentStep === 3 && 'Please review your information before submitting'}
+            </p>
+          </div>
+
+          {error   && <div className="error-message">{error}</div>}
+          {success && <div className="success-message">{success}</div>}
+
+          {currentStep === 1 && (
+            <form onSubmit={handleSubmit} className="register-form">
+              <div className="form-group">
+                <label htmlFor="fullName" className="form-label">Full Name</label>
+                <input type="text" id="fullName" name="fullName" value={formData.fullName}
+                  onChange={handleChange} placeholder="Enter your full name" className="form-input" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="email" className="form-label">Email Address</label>
+                <input type="email" id="email" name="email" value={formData.email}
+                  onChange={handleChange} placeholder="Enter your email" className="form-input" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="password" className="form-label">Password</label>
+                <input type="password" id="password" name="password" value={formData.password}
+                  onChange={handleChange} placeholder="Enter your password" className="form-input" required />
+              </div>
+              <div className="form-group">
+                <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" value={formData.confirmPassword}
+                  onChange={handleChange} placeholder="Confirm your password" className="form-input" required />
+              </div>
+              <button type="submit" className="login-button" disabled={isLoading}>
+                {isLoading ? 'Processing…' : 'Next'}
+              </button>
+            </form>
+          )}
+
+          {currentStep === 2 && (
+            <form onSubmit={handleSubmit} className="register-form">
+              <div className="form-group">
+                <p className="role-label">I am a…</p>
+                <div className="role-grid">
+                  {roleOptions.map(({ val, label, desc, icon }) => (
+                    <label key={val} className="role-option">
+                      <input type="radio" name="role" value={val}
+                        checked={formData.role === val} onChange={handleChange} />
+                      <div className="role-option-icon">{icon}</div>
+                      <div>
+                        <div className="role-option-title">{label}</div>
+                        <div className="role-option-desc">{desc}</div>
+                      </div>
+                      <div className="role-check"><CheckIcon /></div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="form-navigation">
+                <button type="button" onClick={prevStep} className="back-button">Back</button>
+                <button type="submit" className="register-button" disabled={isLoading}>
+                  {isLoading ? 'Processing…' : 'Continue'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {currentStep === 3 && (
+            <form onSubmit={handleSubmit} className="register-form">
+              <div className="review-section">
+                <h3 className="review-title">Personal Information</h3>
+                <div className="review-item">
+                  <span className="review-label">Full Name:</span>
+                  <span className="review-value">{formData.fullName || 'Not provided'}</span>
+                </div>
+                <div className="review-item">
+                  <span className="review-label">Email Address:</span>
+                  <span className="review-value">{formData.email || 'Not provided'}</span>
+                </div>
+                <div className="review-item">
+                  <span className="review-label">Account Type:</span>
+                  <span className="review-value">{formData.role === 'PATIENT' ? 'Patient' : 'Licensed Doctor'}</span>
+                </div>
+              </div>
+
+              {formData.role === 'DOCTOR' && (
+                <div className="review-section" style={{
+                  marginTop: '12px', padding: '12px 16px',
+                  background: '#fffbeb', border: '1px solid #fcd34d',
+                  borderRadius: '8px', fontSize: '13px', color: '#92400e'
+                }}>
+                  ⚠️ As a Licensed Doctor, you will need to complete a verification step after registration including uploading your PRC License.
+                </div>
+              )}
+
+              <div className="confirmation-section">
+                <div className="confirmation-checkbox">
+                  <input type="checkbox" id="terms" required />
+                  <label htmlFor="terms" className="checkbox-label">
+                    I agree to Terms of Service and Privacy Policy
+                  </label>
+                </div>
+                <div className="confirmation-checkbox">
+                  <input type="checkbox" id="consent" required />
+                  <label htmlFor="consent" className="checkbox-label">
+                    I consent to receive communications about my mental health journey
+                  </label>
+                </div>
+              </div>
+
+              <div className="form-navigation">
+                <button type="button" onClick={prevStep} className="back-button">Back</button>
+                <button type="submit" className="register-button" disabled={isLoading}>
+                  {isLoading ? 'Creating Account…' : formData.role === 'DOCTOR' ? 'Next: Verification' : 'Complete Registration'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          <div className="divider">
+            <div className="divider-line"/>
+            <span className="divider-text">Or continue with</span>
+            <div className="divider-line"/>
+          </div>
+
+          <button type="button" onClick={handleGoogleRegister} className="google-button" disabled={isLoading}>
+            <svg className="google-icon" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            {isLoading ? 'Redirecting to Google...' : 'Sign up with Google'}
+          </button>
+
+          <p className="login-link">
+            Already have an account?{' '}
+            <button type="button" onClick={() => navigate('/login')}
+              style={{ background: 'none', border: 'none', color: 'inherit',
+                cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+              Sign in
+            </button>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };
 

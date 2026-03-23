@@ -1,266 +1,401 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-const baseInputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 16px',
-  fontSize: '14px',
-  color: '#111827',
-  background: '#F9FAFB',
-  border: '1px solid #E5E7EB',
-  borderRadius: '12px',
-  outline: 'none',
-  fontFamily: "'Inter', sans-serif",
-  transition: 'border-color 0.15s, box-shadow 0.15s, background 0.15s',
-};
-
-interface InputFieldProps {
-  type: string;
-  name: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder: string;
-  required?: boolean;
-}
-
-const InputField: React.FC<InputFieldProps> = ({ type, name, value, onChange, placeholder, required }) => (
-  <input
-    type={type}
-    name={name}
-    value={value}
-    onChange={onChange}
-    placeholder={placeholder}
-    required={required}
-    style={baseInputStyle}
-    onFocus={(e) => {
-      e.currentTarget.style.borderColor = '#2563EB';
-      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.12)';
-      e.currentTarget.style.background = '#ffffff';
-      e.currentTarget.style.color = '#111827';
-    }}
-    onBlur={(e) => {
-      e.currentTarget.style.borderColor = '#E5E7EB';
-      e.currentTarget.style.boxShadow = 'none';
-      e.currentTarget.style.background = '#F9FAFB';
-      e.currentTarget.style.color = '#111827';
-    }}
-  />
-);
+import "../styles/Login.css";
 
 const Login: React.FC = () => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const [formData, setFormData]     = useState({ email: '', password: '' });
+  const [error, setError]           = useState('');
+  const [success, setSuccess]       = useState('');
+  const [isLoading, setIsLoading]   = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [showOtpFlow, setShowOtpFlow] = useState(false);
+  const [otpCode, setOtpCode]         = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  // ✅ If already logged in, go to dashboard
+  useEffect(() => {
+    const session = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (session) {
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+  }, [navigate]);
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError('');
+  // ✅ Block back navigation — stay on login, don't let browser go to Google OAuth page
+  useEffect(() => {
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // ✅ Handle Google OAuth redirect params
+  useEffect(() => {
+    const params  = new URLSearchParams(window.location.search);
+    const gEmail  = params.get('googleEmail');
+    const err     = params.get('error');
+
+    window.history.replaceState({}, document.title, '/login');
+
+    if (err === 'cancelled') return;
+    if (err) { setError('Google sign-in failed. Please try again.'); return; }
+
+    if (gEmail) {
+      setGoogleEmail(gEmail);
+      sendOtp(gEmail);
+    }
+  }, []);
+
+  const sendOtp = async (email: string) => {
     setIsLoading(true);
+    setError('');
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
+      const res  = await fetch('http://localhost:8083/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ email }),
       });
-      if (response.ok) {
-        const userData = await response.json();
-        localStorage.setItem('user', JSON.stringify(userData));
-        navigate('/dashboard');
+      const data = await res.json();
+      if (data.success) {
+        setShowOtpFlow(true);
+        setSuccess(`OTP sent!${data.otp ? ' (Dev — OTP: ' + data.otp + ')' : ''}`);
       } else {
-        const errText = await response.text();
-        setError(errText || 'Invalid email or password.');
+        setError('Failed to send OTP. Please try again.');
       }
     } catch {
-      setError('Failed to connect to the server.');
+      setError('Failed to connect to server.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── Google OAuth Logic ──
-  const handleGoogleLogin = () => {
-    // This redirects the browser to the backend OAuth2 entry point
-    window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    try {
+      const verifyRes  = await fetch('http://localhost:8083/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: googleEmail, otp: otpCode }),
+      });
+      const verifyData = await verifyRes.json();
+
+      if (!verifyData.success) {
+        setError('Invalid or expired OTP. Please try again.');
+        return;
+      }
+
+      const loginRes  = await fetch('http://localhost:8083/api/auth/google-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: googleEmail }),
+      });
+      const loginData = await loginRes.json();
+
+      if (loginData.success) {
+        const userData = {
+          userId:   loginData.userId,
+          email:    loginData.email,
+          fullName: loginData.fullName,
+          role:     loginData.role,
+        };
+        if (rememberMe) {
+          localStorage.setItem('user', JSON.stringify(userData));
+        } else {
+          sessionStorage.setItem('user', JSON.stringify(userData));
+          sessionStorage.setItem('sessionStart', Date.now().toString());
+        }
+        setSuccess('Login successful! Redirecting...');
+        setTimeout(() => navigate('/dashboard', { replace: true }), 1500);
+      } else {
+        setError(loginData.error || 'Login failed. Please try again.');
+      }
+    } catch {
+      setError('Failed to connect to server.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  return (
-    <>
-      <style>{`
-        html, body, #root { margin: 0; padding: 0; width: 100%; min-height: 100vh; box-sizing: border-box; }
-        *, *::before, *::after { box-sizing: border-box; }
-        input, button { font-family: 'Inter', sans-serif; }
-        input::placeholder { color: #9CA3AF !important; }
-        input { color: #111827 !important; }
-        @media (min-width: 1024px) { .therapea-left { display: flex !important; } }
-      `}</style>
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(''); setSuccess(''); setIsLoading(true);
+    try {
+      const res = await fetch('http://localhost:8083/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (rememberMe) {
+          localStorage.setItem('user', JSON.stringify(data));
+        } else {
+          sessionStorage.setItem('user', JSON.stringify(data));
+          sessionStorage.setItem('sessionStart', Date.now().toString());
+        }
+        setSuccess('Login successful! Redirecting...');
+        setTimeout(() => navigate('/dashboard', { replace: true }), 1500);
+      } else {
+        const text = await res.text();
+        setError(text || 'Login failed. Please check your credentials.');
+      }
+    } catch {
+      setError('Failed to connect to server.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      <div style={{ minHeight: '100vh', width: '100vw', display: 'flex', fontFamily: "'Inter', sans-serif", background: '#ffffff' }}>
+const handleGoogleLogin = async () => {
+    setIsLoading(true); setError('');
+    try {
+      const res  = await fetch('http://localhost:8083/api/auth/google-register-url');
+      const data = await res.json();
+      if (!data.success) { setError('Failed to initiate Google sign-in.'); return; }
 
-        {/* ── Left Panel ── */}
-        <div
-          className="therapea-left"
-          style={{
-            width: '50%',
-            display: 'none',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            padding: '48px',
-            position: 'relative',
-            overflow: 'hidden',
-            background: 'linear-gradient(135deg, #1d4ed8 0%, #2563EB 50%, #7C3AED 100%)',
-          }}
-        >
-          <div style={{ position: 'absolute', top: -96, right: -96, width: 384, height: 384, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
-          <div style={{ position: 'absolute', bottom: -96, left: -96, width: 320, height: 320, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
+      sessionStorage.setItem('oauth_state', data.state);
 
-          <div style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, background: '#fff', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-              <span style={{ color: '#2563EB', fontWeight: 700, fontSize: 18 }}>T</span>
-            </div>
-            <span style={{ color: '#fff', fontWeight: 700, fontSize: 20 }}>TheraPea</span>
-          </div>
+      // ✅ Open in popup — Google pages never touch main window history
+      const popup = window.open(
+        data.url,
+        'google-oauth',
+        'width=500,height=600,scrollbars=yes,resizable=yes'
+      );
 
-          <div style={{ position: 'relative', zIndex: 10 }}>
-            <div style={{ width: 64, height: 64, background: 'rgba(255,255,255,0.18)', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="white">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
+      if (!popup) {
+        setError('Popup blocked. Please allow popups for this site.');
+        setIsLoading(false);
+        return;
+      }
+
+      // ✅ Listen for result from popup
+      const handleMessage = async (event: MessageEvent) => {
+        if (event.origin !== 'http://localhost:8083') return;
+        window.removeEventListener('message', handleMessage);
+        setIsLoading(false);
+
+        const { type, email } = event.data;
+
+        if (type === 'error') {
+          setError('Google sign-in failed. Please try again.');
+          return;
+        }
+
+        if (type === 'existing') {
+          // Existing user — trigger OTP flow
+          setGoogleEmail(email);
+          sendOtp(email);
+          return;
+        }
+
+        if (type === 'new') {
+          // New user — redirect to register for profile completion
+          navigate(`/register?email=${encodeURIComponent(email)}&name=${encodeURIComponent(event.data.name || '')}`);
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
+
+      // Cleanup if popup closed manually
+      const pollClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(pollClosed);
+          window.removeEventListener('message', handleMessage);
+          setIsLoading(false);
+        }
+      }, 500);
+
+    } catch {
+      setError('Failed to connect to server.');
+      setIsLoading(false);
+    }
+  };
+
+  const CheckIcon = () => (
+    <svg width="10" height="8" viewBox="0 0 12 10" fill="none">
+      <path d="M1 5l3.5 3.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+
+  // ── OTP Verification Screen ──
+  if (showOtpFlow) {
+    return (
+      <div className="login-container">
+        <div className="login-left">
+          <div className="left-logo">
+            <div className="left-logo-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+                <path d="M12 21.7C17.3 17 22 13 22 8.5 22 5.4 19.6 3 16.5 3c-1.8 0-3.6.9-4.5 2.3C11.1 3.9 9.3 3 7.5 3 4.4 3 2 5.4 2 8.5c0 4.5 4.7 8.5 10 13.2z"/>
               </svg>
             </div>
-            <h2 style={{ color: '#fff', fontSize: 30, fontWeight: 700, lineHeight: 1.25, marginBottom: 12 }}>
-              Your mental health<br />journey starts here
-            </h2>
-            <p style={{ color: 'rgba(219,234,254,0.9)', fontSize: 15, lineHeight: 1.6, marginBottom: 32 }}>
-              Connect with licensed therapists, track your progress, and take control of your well-being.
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
-              {[{ value: '500+', label: 'Therapists' }, { value: '10k+', label: 'Patients' }, { value: '4.9★', label: 'Rating' }].map((s) => (
-                <div key={s.label} style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 14, padding: '16px 12px' }}>
-                  <p style={{ color: '#fff', fontWeight: 700, fontSize: 20, marginBottom: 2 }}>{s.value}</p>
-                  <p style={{ color: 'rgba(219,234,254,0.8)', fontSize: 12 }}>{s.label}</p>
-                </div>
-              ))}
-            </div>
+            <span className="left-logo-text">TheraPea</span>
           </div>
-          <p style={{ position: 'relative', zIndex: 10, color: 'rgba(191,219,254,0.65)', fontSize: 12 }}>© 2024 TheraPea. All rights reserved.</p>
+          <div className="left-content">
+            <h2>Continue your wellness journey</h2>
+            <p>Verify your identity to securely access your account.</p>
+          </div>
         </div>
-
-        {/* ── Right Panel ── */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '48px 32px', background: '#ffffff' }}>
-          <div style={{ maxWidth: 380, width: '100%' }}>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40 }} className="mobile-logo">
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ color: '#fff', fontWeight: 700 }}>T</span>
-              </div>
-              <span style={{ fontWeight: 700, color: '#111827', fontSize: 18 }}>TheraPea</span>
-            </div>
-
-            <div style={{ marginBottom: 32 }}>
-              <h1 style={{ fontSize: 30, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Welcome back</h1>
-              <p style={{ fontSize: 14, color: '#6B7280' }}>Sign in to continue your journey</p>
-            </div>
-
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>Email address</label>
-                <InputField type="email" name="email" value={formData.email} onChange={handleChange} placeholder="you@example.com" required />
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>Password</label>
-                  <a href="#" style={{ fontSize: 12, fontWeight: 500, color: '#2563EB', textDecoration: 'none' }}>Forgot password?</a>
-                </div>
-                <InputField type="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" required />
-              </div>
-
-              {error && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 12, background: '#FEF2F2', border: '1px solid #FECACA', color: '#EF4444', fontSize: 13, fontWeight: 500 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+        <div className="login-right">
+          <div className="login-card">
+            <div className="login-header">
+              <div className="login-logo">
+                <div className="login-logo-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+                    <path d="M12 21.7C17.3 17 22 13 22 8.5 22 5.4 19.6 3 16.5 3c-1.8 0-3.6.9-4.5 2.3C11.1 3.9 9.3 3 7.5 3 4.4 3 2 5.4 2 8.5c0 4.5 4.7 8.5 10 13.2z"/>
                   </svg>
-                  {error}
                 </div>
-              )}
+                <span className="login-logo-text">Thera<span>Pea</span></span>
+              </div>
+              <h1 className="login-title">Verify Your Identity</h1>
+              <p className="login-subtitle">
+                Enter the OTP to sign in as <strong>{googleEmail}</strong>
+              </p>
+            </div>
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                style={{
-                  width: '100%', padding: '13px 16px', borderRadius: 12, border: 'none',
-                  background: isLoading ? '#93C5FD' : '#2563EB', color: '#ffffff',
-                  fontSize: 14, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer',
-                  boxShadow: isLoading ? 'none' : '0 4px 14px rgba(37,99,235,0.35)',
-                  transition: 'background 0.15s', fontFamily: "'Inter', sans-serif",
-                }}
-                onMouseEnter={(e) => { if (!isLoading) e.currentTarget.style.background = '#1d4ed8'; }}
-                onMouseLeave={(e) => { if (!isLoading) e.currentTarget.style.background = '#2563EB'; }}
-              >
-                {isLoading ? 'Signing in…' : 'Sign in'}
+            {error   && <div className="error-message">{error}</div>}
+            {success && <div className="success-message">{success}</div>}
+
+            <form onSubmit={handleVerifyOtp} className="login-form">
+              <div className="form-group">
+                <label htmlFor="otp" className="form-label">One-Time Password (OTP)</label>
+                <input type="text" id="otp" value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  placeholder="Enter 6-digit code" className="form-input"
+                  maxLength={6} required />
+              </div>
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input type="checkbox" checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)} />
+                  &nbsp;Remember me
+                </label>
+              </div>
+              <button type="submit" className="login-button" disabled={isLoading}>
+                {isLoading ? 'Verifying…' : 'Verify & Sign In'}
               </button>
             </form>
 
-            {/* ── OR Divider ── */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0' }}>
-              <div style={{ flex: 1, height: '1px', background: '#E5E7EB' }}></div>
-              <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>or</span>
-              <div style={{ flex: 1, height: '1px', background: '#E5E7EB' }}></div>
+            <div style={{ marginTop: '12px', textAlign: 'center' }}>
+              <button type="button" className="back-button"
+                onClick={() => sendOtp(googleEmail)} disabled={isLoading}>
+                Resend OTP
+              </button>
             </div>
-
-            {/* ── Google Sign In Button ── */}
-            <button
-              onClick={handleGoogleLogin}
-              type="button"
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 12,
-                padding: '12px 16px',
-                borderRadius: '12px',
-                border: '1px solid #E5E7EB',
-                background: '#ffffff',
-                color: '#374151',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-                fontFamily: "'Inter', sans-serif",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#F9FAFB';
-                e.currentTarget.style.borderColor = '#D1D5DB';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#ffffff';
-                e.currentTarget.style.borderColor = '#E5E7EB';
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 48 48">
-                <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
-                <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" />
-                <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" />
-                <path fill="#1976D2" d="M43.611,20.083L43.595,20L42,20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z" />
-              </svg>
-              Sign in with Google
-            </button>
-
-            <p style={{ textAlign: 'center', marginTop: 28, fontSize: 14, color: '#6B7280' }}>
-              Don't have an account?{' '}
-              <span onClick={() => navigate('/register')} style={{ color: '#2563EB', fontWeight: 600, cursor: 'pointer' }}>
-                Create one
-              </span>
+            <p className="signup-link" style={{ marginTop: '16px' }}>
+              <button type="button" onClick={() => setShowOtpFlow(false)}
+                style={{ background: 'none', border: 'none', color: 'inherit',
+                  cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+                ← Back to Login
+              </button>
             </p>
           </div>
         </div>
       </div>
-    </>
+    );
+  }
+
+  // ── Main Login Screen ──
+  return (
+    <div className="login-container">
+      <div className="login-left">
+        <div className="left-logo">
+          <div className="left-logo-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+              <path d="M12 21.7C17.3 17 22 13 22 8.5 22 5.4 19.6 3 16.5 3c-1.8 0-3.6.9-4.5 2.3C11.1 3.9 9.3 3 7.5 3 4.4 3 2 5.4 2 8.5c0 4.5 4.7 8.5 10 13.2z"/>
+            </svg>
+          </div>
+          <span className="left-logo-text">TheraPea</span>
+        </div>
+        <div className="left-content">
+          <h2>Continue your wellness journey</h2>
+          <p>Sign in to connect with your care team, track your progress, and attend your sessions.</p>
+          {['Secure HIPAA-compliant platform', 'Licensed mental health professionals', 'Flexible scheduling, any time'].map(f => (
+            <div key={f} className="left-feature">
+              <div className="left-feature-dot"><CheckIcon /></div>
+              <span>{f}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="login-right">
+        <div className="login-card">
+          <div className="login-header">
+            <div className="login-logo">
+              <div className="login-logo-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+                  <path d="M12 21.7C17.3 17 22 13 22 8.5 22 5.4 19.6 3 16.5 3c-1.8 0-3.6.9-4.5 2.3C11.1 3.9 9.3 3 7.5 3 4.4 3 2 5.4 2 8.5c0 4.5 4.7 8.5 10 13.2z"/>
+                </svg>
+              </div>
+              <span className="login-logo-text">Thera<span>Pea</span></span>
+            </div>
+            <h1 className="login-title">Welcome Back</h1>
+            <p className="login-subtitle">Sign in to your account to continue your wellness journey</p>
+          </div>
+
+          {error   && <div className="error-message">{error}</div>}
+          {success && <div className="success-message">{success}</div>}
+
+          <form onSubmit={handleLogin} className="login-form">
+            <div className="form-group">
+              <label htmlFor="email" className="form-label">Email Address</label>
+              <input type="email" id="email" name="email" value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="Enter your email" className="form-input" required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="password" className="form-label">Password</label>
+              <input type="password" id="password" name="password" value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Enter your password" className="form-input" required />
+              <div className="form-footer">
+                <a href="#" className="forgot-link">Forgot password?</a>
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input type="checkbox" checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)} />
+                &nbsp;Remember me
+              </label>
+            </div>
+            <button type="submit" className="login-button" disabled={isLoading}>
+              {isLoading ? 'Signing in…' : 'Sign In'}
+            </button>
+          </form>
+
+          <div className="divider">
+            <div className="divider-line"/>
+            <span className="divider-text">Or</span>
+            <div className="divider-line"/>
+          </div>
+
+          <button onClick={handleGoogleLogin} className="google-button" disabled={isLoading}>
+            <svg className="google-icon" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            {isLoading ? 'Redirecting to Google...' : 'Sign in with Google'}
+          </button>
+
+          <p className="signup-link">
+            Don't have an account?{' '}
+            <button type="button" onClick={() => navigate('/register')}
+              style={{ background: 'none', border: 'none', color: 'inherit',
+                cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+              Sign up
+            </button>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };
 
