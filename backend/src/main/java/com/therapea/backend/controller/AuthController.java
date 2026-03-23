@@ -8,9 +8,10 @@ import com.therapea.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -40,21 +41,46 @@ public class AuthController {
         }
     }
 
-    /**
-     * This endpoint is called by React to check if a user is logged in via Google (OAuth2)
-     */
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal OAuth2User principal) {
-        if (principal == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Not authenticated");
+    public ResponseEntity<?> getCurrentUser(@RequestParam String email) {
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email is required");
         }
-
         try {
-            String email = principal.getAttribute("email");
             UserEntity user = userService.findByEmail(email);
-            return ResponseEntity.ok(mapToDTO(user, "OAuth2 Sync successful"));
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+            }
+            return ResponseEntity.ok(mapToDTO(user, "User found"));
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User record not found");
+        }
+    }
+
+    @PostMapping("/doctor-verification")
+    public ResponseEntity<Map<String, Object>> doctorVerification(
+            @RequestParam("email")       String email,
+            @RequestParam("clinicalBio") String clinicalBio,
+            @RequestParam("hourlyRate")  String hourlyRate,
+            @RequestParam("prcLicense")  MultipartFile prcLicense) {
+        try {
+            System.out.println("📋 Doctor verification received for: " + email);
+            System.out.println("   Bio: "  + clinicalBio);
+            System.out.println("   Rate: " + hourlyRate);
+            System.out.println("   File: " + prcLicense.getOriginalFilename() +
+                    " (" + prcLicense.getSize() + " bytes)");
+
+            // TODO: save file + metadata to DB/storage
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Verification submitted successfully"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "error", e.getMessage()
+            ));
         }
     }
 
