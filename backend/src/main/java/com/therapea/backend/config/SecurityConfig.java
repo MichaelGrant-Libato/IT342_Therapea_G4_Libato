@@ -24,7 +24,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/",
                                 "/error",
-                                "/api/auth/**"
+                                "/api/auth/**",
+                                "/api/dashboard/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 );

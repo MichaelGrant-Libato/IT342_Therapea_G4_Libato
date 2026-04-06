@@ -21,23 +21,40 @@ public class UserService {
         if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new RuntimeException("Email is already in use.");
         }
+
+        // 👇 ADD THESE THREE LINES 👇
+        System.out.println("====== REGISTRATION RECEIVED ======");
+        System.out.println("👉 Raw Password from React: [" + dto.getPassword() + "]");
+        System.out.println("👉 Generated Hash: [" + passwordEncoder.encode(dto.getPassword()) + "]");
+
         UserEntity user = new UserEntity();
         user.setFullName(dto.getFullName());
         user.setEmail(dto.getEmail());
-        // HASH the password before saving to Supabase
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setRole(dto.getRole());
         return userRepository.save(user);
     }
 
     public UserEntity loginUser(LoginDTO dto) {
-        UserEntity user = userRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found."));
+        // 1. Define a single, generic error message
+        RuntimeException authError = new RuntimeException("Invalid email or password.");
 
-        // Compare using the encoder
-        if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid password.");
+        // 2. Throw the generic error if the email is not found
+        UserEntity user = userRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() -> authError);
+
+        // 3. Throw the SAME generic error if they are a Google OAuth user
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw authError;
         }
+
+        System.out.println("👉 Password typed in React: [" + dto.getPassword() + "]");
+        System.out.println("👉 Hash saved in Database: [" + user.getPassword() + "]");
+
+        if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+            throw authError;
+        }
+
         return user;
     }
 
