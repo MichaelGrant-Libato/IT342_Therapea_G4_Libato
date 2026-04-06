@@ -33,10 +33,16 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginDTO loginDTO) {
         try {
+            System.out.println("Attempting login for email: " + loginDTO.getEmail());
             UserEntity user = userService.loginUser(loginDTO);
             DashboardDTO response = mapToDTO(user, "Login successful");
             return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
+            // Catching Exception grabs EVERYTHING
+            System.out.println("====== LOGIN REJECTED ======");
+            System.out.println("Reason: " + e.getMessage());
+            e.printStackTrace(System.out);
+
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
@@ -88,6 +94,7 @@ public class AuthController {
         DashboardDTO dto = new DashboardDTO();
         dto.setUserId(user.getId());
         dto.setFullName(user.getFullName());
+        dto.setEmail(user.getEmail());
         dto.setRole(user.getRole());
         dto.setMessage(message);
         return dto;
