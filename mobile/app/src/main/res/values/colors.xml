@@ -1,0 +1,9 @@
+<resources>
+    <color name="sage_green">#8BA888</color>
+    <color name="sage_green_dark">#718D6F</color> <color name="soft_lavender">#A78BFA</color>
+    <color name="warm_off_white">#F9FAFB</color>
+    <color name="surface_white">#FFFFFF</color>
+    <color name="dark_gray">#1F2937</color>
+    <color name="muted_gray">#6B7280</color>
+    <color name="border_gray">#E5E7EB</color>
+</resources>
