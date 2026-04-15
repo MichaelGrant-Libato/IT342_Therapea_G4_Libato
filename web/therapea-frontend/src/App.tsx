@@ -3,7 +3,9 @@ import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-// import Assessment from './pages/Assessment';
+import Assessment from './pages/Assessment';
+import EmergencyMap from './pages/EmergencyMap';
+import FindTherapist from './pages/FindTherapist';
 
 function App() {
   return (
@@ -14,7 +16,9 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="*" element={<Navigate to="/" />} />
-        {/* <Route path="/assessment" element={<Assessment />} /> */}
+        <Route path="/assessment" element={<Assessment />} />
+        <Route path="/emergency" element={<EmergencyMap />} />
+        <Route path="/therapists" element={<FindTherapist />} />
       </Routes>
     </Router>
   );

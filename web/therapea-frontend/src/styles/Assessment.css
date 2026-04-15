@@ -1,0 +1,275 @@
+.assessment-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f4f7f9;
+  padding: 20px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.assessment-card {
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  width: 100%;
+  max-width: 480px;
+  padding: 40px;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+}
+
+.landing-graphic {
+  background-color: #e2e8f0;
+  height: 160px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.brain-icon {
+  font-size: 48px;
+  background: #cbd5e1;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.graphic-line {
+  height: 4px;
+  width: 60px;
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.assessment-title {
+  color: #0f172a;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 0 0 16px 0;
+}
+
+.divider {
+  border: 0;
+  height: 2px;
+  background: #e2e8f0;
+  margin: 0 0 24px 0;
+}
+
+.info-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 20px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.btn-primary {
+  background: #1e293b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  max-width: 200px;
+  margin-bottom: 16px;
+}
+
+.btn-primary:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  background: white;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  max-width: 200px;
+}
+
+.secure-badge {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 10px;
+}
+
+/* Quiz Styles */
+.assessment-quiz-wrapper {
+  background: #fafbfc;
+  width: 100%;
+  max-width: 600px;
+  padding: 20px;
+}
+
+.progress-bar-container {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  width: 100%;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: #475569;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 40px;
+}
+
+.quiz-question {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+
+.quiz-option-btn {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quiz-option-btn:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.quiz-option-btn.selected {
+  border-color: #1e293b;
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.quiz-footer {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* Results Styles */
+.results-card {
+  max-width: 600px;
+}
+
+.results-title {
+  font-size: 22px;
+  margin: 0 0 20px 0;
+  color: #1e293b;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.risk-label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.risk-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 20px;
+}
+
+.score-box {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 24px;
+  margin-bottom: 30px;
+}
+
+.score-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.score-number {
+  font-size: 48px;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.score-max {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.recommendation-box {
+  text-align: left;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+.recommendation-box strong {
+  display: block;
+  color: #1e293b;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.disclaimer {
+  background: #f8fafc;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  margin-top: 16px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.results-actions {
+  display: flex;
+  gap: 12px;
+}
+.results-actions button {
+  max-width: none;
+  flex: 1;
+}

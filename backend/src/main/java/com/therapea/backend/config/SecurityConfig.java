@@ -25,7 +25,8 @@ public class SecurityConfig {
                                 "/",
                                 "/error",
                                 "/api/auth/**",
-                                "/api/dashboard/**"
+                                "/api/dashboard/**",
+                                "/api/assessments/**" // <-- ADDED THIS to allow quiz submissions
                         ).permitAll()
                         .anyRequest().authenticated()
                 );
@@ -43,7 +44,8 @@ public class SecurityConfig {
                 "http://10.0.2.2"
         ));
 
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // <-- ADDED "PATCH" HERE for the Doctor's "Mark Reviewed" button
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
         config.setAllowCredentials(true);
 
