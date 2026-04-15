@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F9FAFB">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="24dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/tvDoctorName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Hello, Dr. Grant"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:textColor="#1F2937"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Clinical Overview"
+                        android:textSize="14sp"
+                        android:textColor="#6B7280"/>
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/ivLogout"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:padding="12dp"
+                    android:src="@android:drawable/ic_lock_power_off"
+                    android:background="@drawable/bg_input"
+                    android:backgroundTint="#FEE2E2"
+                    android:contentDescription="Logout"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackgroundBorderless" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card_soft"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:layout_marginBottom="28dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="16dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Upcoming Appointment"
+                        android:textSize="14sp"
+                        android:textColor="#6B7280"/>
+                    <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Full Schedule →"
+                        android:textSize="12sp"
+                        android:textColor="#1F2937"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="In 15 Minutes"
+                    android:textSize="12sp"
+                    android:textColor="#FFFFFF"
+                    android:background="#8BA888"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
+                    android:layout_marginBottom="16dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Sarah Connor"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="#1F2937"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Topic: Anxiety Management"
+                            android:textSize="12sp"
+                            android:textColor="#6B7280" />
+                    </LinearLayout>
+                    <Button
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:text="Start Call"
+                        android:background="@drawable/bg_btn_sage"
+                        android:textColor="#FFFFFF"
+                        android:textAllCaps="false"
+                        android:paddingHorizontal="24dp"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Doctor Tools"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#1F2937"
+                android:layout_marginBottom="12dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="3"
+                android:layout_marginBottom="28dp">
+
+                <LinearLayout
+                    android:id="@+id/btnReviewTriage"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card_soft"
+                    android:padding="16dp"
+                    android:layout_marginEnd="8dp">
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="#8BA888" android:layout_marginBottom="8dp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Review\nTriage" android:textSize="12sp" android:textColor="#4B5563" android:gravity="center"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/btnMyPatients"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card_soft"
+                    android:padding="16dp"
+                    android:layout_marginHorizontal="4dp">
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="#9CA3AF" android:layout_marginBottom="8dp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="My\nPatients" android:textSize="12sp" android:textColor="#4B5563" android:gravity="center"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/btnEarnings"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:background="@drawable/bg_card_soft"
+                    android:padding="16dp"
+                    android:layout_marginStart="8dp">
+                    <View android:layout_width="32dp" android:layout_height="32dp" android:background="#9CA3AF" android:layout_marginBottom="8dp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="View\nEarnings" android:textSize="12sp" android:textColor="#4B5563" android:gravity="center"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Patient Activity"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#1F2937"
+                android:layout_marginBottom="12dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card_soft"
+                android:padding="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="12dp">
+                <View android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/bg_input" android:backgroundTint="#F3F4F6" android:layout_marginEnd="16dp"/>
+                <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="New Triage Result: John Doe" android:textColor="#1F2937" android:textSize="14sp" android:textStyle="bold"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Just now" android:textSize="12sp" android:textColor="#6B7280"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:background="#FFFFFF"
+        android:elevation="16dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingHorizontal="16dp">
+
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center">
+            <View android:layout_width="24dp" android:layout_height="24dp" android:background="#8BA888" android:layout_marginBottom="4dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Home" android:textSize="12sp" android:textColor="#8BA888" android:textStyle="bold"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center">
+            <View android:layout_width="24dp" android:layout_height="24dp" android:background="#D1D5DB" android:layout_marginBottom="4dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Patients" android:textSize="12sp" android:textColor="#6B7280"/>
+        </LinearLayout>
+
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center">
+            <View android:layout_width="24dp" android:layout_height="24dp" android:background="#D1D5DB" android:layout_marginBottom="4dp"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Profile" android:textSize="12sp" android:textColor="#6B7280"/>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

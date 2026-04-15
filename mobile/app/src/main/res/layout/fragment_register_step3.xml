@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#F9FAFB">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Final Review"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#1F2937"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Step 3 of 3: Confirm Details"
+            android:textSize="14sp"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:orientation="horizontal"
+            android:layout_marginBottom="32dp">
+            <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="#8BA888" android:layout_marginEnd="4dp"/>
+            <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="#8BA888" android:layout_marginEnd="4dp"/>
+            <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="#8BA888"/>
+        </LinearLayout>
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ACCOUNT SUMMARY" android:textSize="12sp" android:textStyle="bold" android:textColor="#9CA3AF" android:layout_marginBottom="12dp"/>
+
+        <TextView android:id="@+id/tvReviewName" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="18sp" android:textColor="#1F2937" android:layout_marginBottom="8dp" android:text="Name: -"/>
+        <TextView android:id="@+id/tvReviewEmail" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="16sp" android:textColor="#6B7280" android:layout_marginBottom="8dp" android:text="Email: -"/>
+        <TextView android:id="@+id/tvReviewRole" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="16sp" android:textStyle="bold" android:textColor="#8BA888" android:layout_marginBottom="24dp" android:text="Role: -"/>
+
+        <LinearLayout
+            android:id="@+id/layoutDoctorReview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginBottom="24dp">
+
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E5E7EB" android:layout_marginBottom="24dp"/>
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PROFESSIONAL DETAILS" android:textSize="12sp" android:textStyle="bold" android:textColor="#9CA3AF" android:layout_marginBottom="12dp"/>
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Clinical Bio" android:textSize="12sp" android:textStyle="bold" android:textColor="#6B7280"/>
+            <TextView android:id="@+id/tvReviewBio" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="#1F2937" android:layout_marginBottom="16dp" android:text="-"/>
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Consultation Rate" android:textSize="12sp" android:textStyle="bold" android:textColor="#6B7280"/>
+            <TextView android:id="@+id/tvReviewRate" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="14sp" android:textColor="#1F2937" android:text="-"/>
+        </LinearLayout>
+
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E5E7EB" android:layout_marginBottom="24dp"/>
+
+        <CheckBox
+            android:id="@+id/cbTermsFinal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="I agree to the TheraPea Terms of Service, Privacy Policy, and HIPAA Consent terms."
+            android:textSize="13sp"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="40dp"/>
+
+        <Button
+            android:id="@+id/btnFinalSubmit"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Complete Registration"
+            android:background="@drawable/bg_btn_sage"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textAllCaps="false"/>
+    </LinearLayout>
+</ScrollView>

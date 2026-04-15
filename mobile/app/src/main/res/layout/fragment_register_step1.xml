@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#F9FAFB">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Create Account"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#1F2937"
+            android:layout_marginTop="24dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Step 1 of 3: Personal Information"
+            android:textSize="14sp"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:orientation="horizontal"
+            android:layout_marginBottom="32dp">
+            <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="#8BA888" android:layout_marginEnd="4dp"/>
+            <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="#E5E7EB" android:layout_marginEnd="4dp"/>
+            <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="#E5E7EB"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Full Name"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="8dp"/>
+        <EditText
+            android:id="@+id/etRegName"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="Juan Dela Cruz"
+            android:background="@drawable/bg_input"
+            android:paddingHorizontal="16dp"
+            android:layout_marginBottom="16dp"
+            android:inputType="textPersonName"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Email Address"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="8dp"/>
+        <EditText
+            android:id="@+id/etRegEmail"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="email@example.com"
+            android:background="@drawable/bg_input"
+            android:paddingHorizontal="16dp"
+            android:layout_marginBottom="16dp"
+            android:inputType="textEmailAddress"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Password"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="8dp"/>
+        <EditText
+            android:id="@+id/etRegPassword"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="••••••••"
+            android:inputType="textPassword"
+            android:background="@drawable/bg_input"
+            android:paddingHorizontal="16dp"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Confirm Password"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="8dp"/>
+        <EditText
+            android:id="@+id/etRegConfirmPassword"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="••••••••"
+            android:inputType="textPassword"
+            android:background="@drawable/bg_input"
+            android:paddingHorizontal="16dp"
+            android:layout_marginBottom="32dp"/>
+
+        <Button
+            android:id="@+id/btnContinue"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Continue"
+            android:background="@drawable/bg_btn_sage"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textAllCaps="false"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="16dp">
+            <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="#E5E7EB"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text=" OR " android:textColor="#9CA3AF" android:textSize="12sp" android:layout_marginHorizontal="8dp"/>
+            <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" android:background="#E5E7EB"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btnRegisterGoogle"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:background="@drawable/bg_btn_outline"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:layout_marginBottom="24dp"
+            android:clickable="true"
+            android:focusable="true">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Continue with Google"
+                android:textColor="#1F2937"
+                android:textStyle="bold"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</ScrollView>

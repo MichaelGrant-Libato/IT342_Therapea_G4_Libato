@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class UserService {
 
@@ -36,23 +38,19 @@ public class UserService {
     }
 
     public UserEntity loginUser(LoginDTO dto) {
-        // 1. Define a single, generic error message
-        RuntimeException authError = new RuntimeException("Invalid email or password.");
-
-        // 2. Throw the generic error if the email is not found
         UserEntity user = userRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> authError);
+                .orElseThrow(() -> new RuntimeException("Invalid email or password."));
 
         // 3. Throw the SAME generic error if they are a Google OAuth user
         if (user.getPassword() == null || user.getPassword().isBlank()) {
-            throw authError;
+            throw new RuntimeException("Please log in using Google.");
         }
 
         System.out.println("👉 Password typed in React: [" + dto.getPassword() + "]");
         System.out.println("👉 Hash saved in Database: [" + user.getPassword() + "]");
 
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            throw authError;
+            throw new RuntimeException("Invalid email or password.");
         }
 
         return user;

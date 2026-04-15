@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#F9FAFB">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Professional Verification"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#1F2937"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Step 2.5: Required for Licensed Doctors"
+            android:textSize="14sp"
+            android:textColor="#E53E3E"
+            android:layout_marginBottom="16dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:orientation="horizontal"
+            android:layout_marginBottom="32dp">
+            <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="#8BA888" android:layout_marginEnd="4dp"/>
+            <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="#8BA888" android:layout_marginEnd="4dp"/>
+            <View android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:background="#E5E7EB"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Clinical Biography"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="8dp"/>
+
+        <EditText
+            android:id="@+id/etClinicalBio"
+            android:layout_width="match_parent"
+            android:layout_height="140dp"
+            android:hint="Specialization, experience, and medical background..."
+            android:gravity="top"
+            android:background="@drawable/bg_input"
+            android:padding="16dp"
+            android:layout_marginBottom="20dp"
+            android:inputType="textMultiLine"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hourly Consultation Rate (PHP)"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="#6B7280"
+            android:layout_marginBottom="8dp"/>
+
+        <EditText
+            android:id="@+id/etHourlyRate"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="1500.00"
+            android:inputType="numberDecimal"
+            android:background="@drawable/bg_input"
+            android:paddingHorizontal="16dp"
+            android:layout_marginBottom="24dp"/>
+
+        <Button
+            android:id="@+id/btnUploadPrc"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Upload PRC License (PDF)"
+            android:background="@drawable/bg_btn_outline"
+            android:textColor="#1F2937"
+            android:textAllCaps="false"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/tvPrcFileName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="No file selected"
+            android:gravity="center"
+            android:textColor="#6B7280"
+            android:textSize="12sp"
+            android:layout_marginBottom="32dp"/>
+
+        <Button
+            android:id="@+id/btnDoctorNext"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Continue to Review"
+            android:background="@drawable/bg_btn_sage"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textAllCaps="false"/>
+    </LinearLayout>
+</ScrollView>
