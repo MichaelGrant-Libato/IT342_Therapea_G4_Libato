@@ -1,0 +1,293 @@
+.ar-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: var(--bg);
+  padding: 40px 24px;
+  transition: filter 0.3s;
+}
+
+.ar-container.blurred {
+  filter: blur(4px);
+  pointer-events: none;
+}
+
+.ar-card {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-subtle);
+  width: 100%;
+  max-width: 520px;
+  padding: 48px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.ar-back-btn {
+  position: absolute;
+  top: 32px;
+  left: 32px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  transition: color 0.18s;
+  padding: 0;
+}
+
+.ar-back-btn:hover {
+  color: var(--text-main);
+}
+
+.ar-header {
+  text-align: center;
+  margin-top: 24px;
+  margin-bottom: 32px;
+}
+
+.ar-title {
+  font-family: 'Lora', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.02em;
+}
+
+.ar-date {
+  color: var(--text-sub);
+  font-size: 14.5px;
+  margin: 0;
+}
+
+.ar-risk-box {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.ar-risk-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.ar-risk-val-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.ar-risk-val {
+  font-family: 'Lora', serif;
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.ar-risk-dot { width: 14px; height: 14px; border-radius: 50%; }
+.ar-risk-dot.low { background: var(--primary); }
+.ar-risk-dot.mild { background: var(--amber); }
+.ar-risk-dot.moderate { background: #EA580C; }
+.ar-risk-dot.high { background: var(--alert-text); }
+
+.ar-score-wrap {
+  background: var(--bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.ar-score-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.ar-score-num {
+  font-family: 'Lora', serif;
+  font-size: 56px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1;
+}
+
+.ar-score-max {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.ar-subscores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.ar-sub-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  text-align: center;
+}
+
+.ar-sub-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.ar-sub-val {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-main);
+  font-family: 'Lora', serif;
+}
+
+.ar-sub-desc {
+  font-size: 12px;
+  color: var(--text-sub);
+  margin-top: 4px;
+}
+
+.ar-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.ar-btn-outline {
+  flex: 1;
+  background-color: transparent;
+  color: var(--text-main);
+  border: 1.5px solid var(--border);
+  border-radius: 9999px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 12px 24px;
+  transition: all 0.18s;
+}
+
+.ar-btn-outline:hover {
+  background: var(--bg);
+  border-color: var(--text-muted);
+}
+
+.ar-btn-delete {
+  background: none;
+  border: none;
+  color: var(--alert-text);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 24px;
+  transition: opacity 0.15s;
+  width: 100%;
+}
+
+.ar-btn-delete:hover {
+  opacity: 0.7;
+}
+
+/* ── Delete Modal ── */
+.ar-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(28, 31, 26, 0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 24px;
+}
+
+.ar-modal-card {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  animation: arModalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes arModalPop {
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.ar-modal-icon {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--alert-bg); color: var(--alert-text);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.ar-modal-title {
+  font-family: 'Lora', serif; font-size: 22px; font-weight: 700;
+  color: var(--text-main); margin: 0 0 8px 0;
+}
+
+.ar-modal-text {
+  font-size: 14.5px; color: var(--text-sub);
+  margin: 0 0 24px 0; line-height: 1.5;
+}
+
+.ar-modal-actions {
+  display: flex; gap: 12px; width: 100%;
+}
+
+.ar-btn-modal-cancel {
+  flex: 1; background: transparent; color: var(--text-main);
+  border: 1.5px solid var(--border); border-radius: 9999px;
+  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px;
+  cursor: pointer; padding: 10px 20px; transition: all 0.18s;
+}
+
+.ar-btn-modal-cancel:hover:not(:disabled) {
+  background: var(--bg); border-color: var(--text-muted);
+}
+
+.ar-btn-modal-delete {
+  flex: 1; background: var(--alert-text); color: white;
+  border: none; border-radius: 9999px;
+  font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 14px;
+  cursor: pointer; padding: 10px 20px; transition: all 0.18s;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+}
+
+.ar-btn-modal-delete:hover:not(:disabled) {
+  background: #B91C1C; transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+}
+
+.ar-btn-modal-delete:disabled {
+  opacity: 0.6; cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .ar-card { padding: 32px 24px; }
+  .ar-actions { flex-direction: column; }
+  .ar-subscores { grid-template-columns: 1fr; }
+}

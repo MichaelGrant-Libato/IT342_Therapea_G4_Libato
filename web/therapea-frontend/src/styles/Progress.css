@@ -1,0 +1,238 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+/* ── Variables ── */
+:root {
+  --primary:       #7A9E78;   
+  --amber:         #F59E0B;
+  --bg:            #F5F6F2;   
+  --surface:       #FFFFFF;
+  --text-main:     #1C1F1A;
+  --text-sub:      #4A5047;
+  --text-muted:    #7A8077;
+  --border:        #E4E6DF;
+  --border-subtle: #ECEEE8;
+  --radius-xl:     28px;
+  --shadow-sm:     0 2px 8px rgba(0,0,0,0.02);
+  --shadow-lg:     0 10px 25px rgba(0,0,0,0.08);
+}
+
+/* ── Header Area ── */
+.prg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+}
+
+.prg-title {
+  font-family: 'Lora', serif;
+  font-size: 28px;
+  color: var(--text-main);
+  margin: 0 0 4px 0;
+}
+
+.prg-subtitle {
+  color: var(--text-sub);
+  margin: 0;
+  font-size: 14.5px;
+}
+
+/* ── Searchable Autocomplete Dropdown ── */
+.prg-search-wrap {
+  position: relative;
+  width: 280px;
+}
+
+.prg-search-input-box {
+  display: flex;
+  align-items: center;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 16px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.prg-search-input-box:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(122, 158, 120, 0.15);
+}
+
+.prg-search-icon {
+  color: var(--text-muted);
+  margin-right: 8px;
+}
+
+.prg-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 12px 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--text-main);
+  outline: none;
+}
+
+.prg-search-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.prg-dropdown-list {
+  position: absolute;
+  top: 110%;
+  left: 0;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 100;
+  padding: 8px 0;
+}
+
+.prg-dropdown-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.prg-dropdown-item:hover {
+  background-color: var(--bg);
+  color: var(--primary);
+}
+
+.prg-dropdown-empty {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── Empty State ── */
+.prg-empty-state {
+  text-align: center;
+  padding: 60px;
+  background: var(--surface);
+  border: 1.5px dashed var(--border);
+  border-radius: 20px;
+  color: var(--text-sub);
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.prg-empty-state span {
+  font-size: 14px;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 8px;
+}
+
+/* ── Chart Layout ── */
+.prg-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.prg-card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 32px;
+  box-shadow: var(--shadow-sm);
+}
+
+.prg-card h2 {
+  margin: 0 0 24px 0;
+  font-size: 18px;
+  color: var(--text-main);
+  font-family: 'DM Sans', sans-serif;
+}
+
+.prg-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 200px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.prg-bar-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 40px;
+  height: 100%;
+}
+
+.prg-bar-track {
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+}
+
+.prg-bar {
+  width: 100%;
+  border-radius: 6px;
+  position: relative;
+  transition: height 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fill-phq { background: var(--primary); }
+.fill-gad { background: var(--amber); }
+
+.prg-tooltip {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.prg-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Dynamic Trend Indicators ── */
+.prg-trend {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.prg-trend.success { color: #059669; } /* Green for improving */
+.prg-trend.danger { color: #DC2626; }  /* Red for worsening */
+.prg-trend.neutral { color: var(--text-muted); }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .prg-grid { grid-template-columns: 1fr; }
+  .prg-header { flex-direction: column; gap: 16px; }
+  .prg-search-wrap { width: 100%; }
+}

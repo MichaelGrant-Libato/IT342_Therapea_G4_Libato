@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SidebarLayout } from '../components/SidebarLayout';
+import '../styles/Dashboard.css';
 
+// ─── Interfaces ───
 interface UserData {
   userId: string; email: string; fullName: string; role: string;
   emailVerified: boolean; profileCompleted: boolean;
@@ -10,64 +13,73 @@ interface UserData {
 interface Assessment {
   id: string; assessmentType: string; phq9Score: number; gad7Score: number;
   clinicalScore: number; riskLevel: string; status: string; createdAt: string;
+  patientName?: string;
 }
 
-const fmt = (iso: string | null) => {
-  if (!iso) return 'N/A';
-  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-};
+interface Appointment {
+  id: string | number;
+  providerId?: string;
+  providerName?: string; 
+  providerRole?: string;
+  patientId?: string;
+  patientName?: string;  
+  date: string;
+  time: string;
+  type: string;          
+  status: string;        
+}
 
-const riskBadge = (level: string) => {
-  const map: Record<string, { bg: string; color: string }> = {
-    Low:      { bg: '#dcfce7', color: '#15803d' },
-    Mild:     { bg: '#fef9c3', color: '#854d0e' },
-    Moderate: { bg: '#ffedd5', color: '#9a3412' },
-    High:     { bg: '#fee2e2', color: '#991b1b' },
+interface PatientRecord {
+  id: string;
+  name: string;
+  status: string;        
+  lastSession: string;
+}
+
+// ─── Helper Styles ───
+const riskStyle = (level: string): React.CSSProperties => {
+  const map: Record<string, { background: string; color: string; border: string }> = {
+    Low:      { background: '#ECFDF5', color: '#065F46', border: '#A7F3D0' },
+    Mild:     { background: '#FFFBEB', color: '#92400E', border: '#FDE68A' },
+    Moderate: { background: '#FFF7ED', color: '#9A3412', border: '#FED7AA' },
+    High:     { background: '#FEF2F2', color: '#991B1B', border: '#FECACA' },
   };
-  return map[level] || { bg: '#f1f5f9', color: '#475569' };
+  const s = map[level] || { background: '#F8FAFC', color: '#475569', border: '#E2E8F0' };
+  return { background: s.background, color: s.color, border: `1px solid ${s.border}` };
 };
 
-const statusBadge = (s: string) =>
+const statusStyle = (s: string): React.CSSProperties =>
   s === 'Reviewed'
-    ? { bg: '#dcfce7', color: '#15803d' }
-    : { bg: '#f1f5f9', color: '#64748b' };
+    ? { background: '#ECFDF5', color: '#065F46', border: '1px solid #A7F3D0' }
+    : { background: '#F8FAFC', color: '#6B7280', border: '1px solid #E5E7EB' };
 
-const Icon = ({ type, size = 18 }: { type: string; size?: number }) => {
-  const d: Record<string, JSX.Element> = {
-    home:      <><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
+const NavIcon = ({ type }: { type: string }) => {
+  const paths: Record<string, JSX.Element> = {
     calendar:  <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
     clipboard: <><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></>,
-    chart:     <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>,
-    settings:  <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></>,
-    message:   <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>,
-    logout:    <><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>,
-    user:      <><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
     users:     <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>,
     bell:      <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></>,
+    trash:     <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>,
     video:     <><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></>,
-    eye:       <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
     check:     <><polyline points="20 6 9 17 4 12"/></>,
   };
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      {d[type]}
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {paths[type]}
     </svg>
   );
 };
 
+// ─── Main Dashboard Component ───
 const Dashboard: React.FC = () => {
-  const [user, setUser]             = useState<UserData | null>(null);
+  const [user, setUser] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [isLoading, setIsLoading]   = useState(true);
-  const [activeNav, setActiveNav]   = useState('dashboard');
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    window.history.pushState(null, '', window.location.href);
-    const h = () => window.history.pushState(null, '', window.location.href);
-    window.addEventListener('popstate', h);
-    return () => window.removeEventListener('popstate', h);
-  }, []);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [patientsList, setPatientsList] = useState<PatientRecord[]>([]);
+  const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
+  
+  const navigate  = useNavigate();
 
   useEffect(() => {
     const load = async () => {
@@ -75,337 +87,440 @@ const Dashboard: React.FC = () => {
       if (!stored) { navigate('/login', { replace: true }); return; }
 
       let parsed: any;
-      try { parsed = JSON.parse(stored); } catch { doLogout(); return; }
+      try { parsed = JSON.parse(stored); } catch { navigate('/login'); return; }
 
       const email = parsed.email;
-      if (!email) { doLogout(); return; }
+      if (!email) { navigate('/login'); return; }
 
+      let role = parsed.role || 'PATIENT';
+
+      // 1. Dynamic Profile Fetch
       try {
-        const profileRes = await fetch(`http://localhost:8083/api/dashboard/profile?email=${encodeURIComponent(email)}`);
-        const profileData = await profileRes.json();
-        
-        if (profileData.success) {
-          setUser(profileData as UserData);
-          const u = { ...parsed, fullName: profileData.fullName, role: profileData.role };
-          localStorage.getItem('user')
-            ? localStorage.setItem('user', JSON.stringify(u))
-            : sessionStorage.setItem('user', JSON.stringify(u));
+        const pRes = await fetch(`http://localhost:8083/api/dashboard/profile?email=${encodeURIComponent(email)}`);
+        const pData = await pRes.json();
+        if (pData.success) {
+          setUser(pData as UserData);
+          role = pData.role;
         } else {
-          setUser({ userId: parsed.userId||'', email: parsed.email||'', fullName: parsed.fullName||'',
-            role: parsed.role||'PATIENT', emailVerified: true, profileCompleted: true,
-            createdAt: null, lastLogin: null });
+          setUser({ ...parsed, role });
         }
-
-        const assessRes = await fetch(`http://localhost:8083/api/assessments?email=${encodeURIComponent(email)}`);
-        const assessData = await assessRes.json();
-        if (assessData.success) setAssessments(assessData.assessments);
-
       } catch {
-        setUser({ userId: parsed.userId||'', email: parsed.email||'', fullName: parsed.fullName||'',
-          role: parsed.role||'PATIENT', emailVerified: true, profileCompleted: true,
-          createdAt: null, lastLogin: null });
-      } finally {
-        setIsLoading(false);
+        setUser({ ...parsed, role });
       }
+
+      // 2. Dynamic Assessments Fetch (SECURE DOCTOR QUEUE LOGIC)
+      try {
+        const endpoint = role === 'DOCTOR' 
+          ? `http://localhost:8083/api/assessments/doctor-queue?doctorEmail=${encodeURIComponent(email)}` 
+          : `http://localhost:8083/api/assessments/user?email=${encodeURIComponent(email)}`;
+
+        const aRes = await fetch(endpoint);
+        const aData = await aRes.json();
+        if (aData.success) {
+          const sorted = aData.assessments.sort((a: Assessment, b: Assessment) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setAssessments(sorted);
+        } else {
+          setAssessments([]);
+        }
+      } catch (err) {
+        console.error("Failed to load assessments:", err);
+        setAssessments([]);
+      }
+
+      // 3. Dynamic Appointments Fetch
+      try {
+        const aptRes = await fetch(`http://localhost:8083/api/appointments/user?email=${encodeURIComponent(email)}`);
+        const aptData = await aptRes.json();
+        if (aptData.success) {
+          setAppointments(aptData.appointments);
+        } else {
+          setAppointments([]);
+        }
+      } catch (err) {
+        console.error("Failed to load appointments:", err);
+        setAppointments([]);
+      }
+
+      // 4. Dynamic Patient Roster Fetch (Doctor Only)
+      if (role === 'DOCTOR') {
+        try {
+          const patRes = await fetch(`http://localhost:8083/api/patients/doctor?email=${encodeURIComponent(email)}`);
+          const patData = await patRes.json();
+          if (patData.success) {
+            setPatientsList(patData.patients);
+          } else {
+            setPatientsList([]);
+          }
+        } catch (err) {
+          console.error("Failed to load patient roster:", err);
+          setPatientsList([]);
+        }
+      }
+
+      setIsLoading(false);
     };
     load();
   }, [navigate]);
 
-  const doLogout = () => {
-    ['user','sessionStart','oauth_state'].forEach(k => {
-      localStorage.removeItem(k); sessionStorage.removeItem(k);
-    });
-    navigate('/login', { replace: true });
+  const handleConfirmDelete = async () => {
+    if (!assessmentToDelete) return;
+    try {
+      await fetch(`http://localhost:8083/api/assessments/${assessmentToDelete}`, { method: 'DELETE' });
+    } catch (error) {
+      console.error("Failed to delete from API", error);
+    }
+    setAssessments(prev => prev.filter(a => a.id !== assessmentToDelete));
+    if (user && user.email) {
+      const localHistory = JSON.parse(localStorage.getItem(`assessments_${user.email}`) || '[]');
+      const filtered = localHistory.filter((a: any) => a.id !== assessmentToDelete);
+      localStorage.setItem(`assessments_${user.email}`, JSON.stringify(filtered));
+    }
+    setAssessmentToDelete(null);
   };
 
   if (isLoading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#f0f4f8', flexDirection:'column', gap:'12px' }}>
-      <div style={{ width:36, height:36, border:'3px solid #e2e8f0', borderTop:'3px solid #1e293b', borderRadius:'50%', animation:'spin .8s linear infinite' }}/>
-      <p style={{ color:'#64748b', fontSize:14 }}>Loading…</p>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-    </div>
+    <SidebarLayout title="Dashboard">
+      <div className="db-loading" style={{ height: '50vh', background: 'transparent' }}>
+        <div className="db-spinner-wrap"><div className="db-spinner" /><div className="db-spinner-ring" /></div>
+        <p>Loading your dashboard…</p>
+      </div>
+    </SidebarLayout>
   );
 
   if (!user) return null;
 
   const isDoctor  = user.role === 'DOCTOR';
-  const firstName = user.fullName?.split(' ')[0] || 'User';
-  const initials  = user.fullName?.split(' ').map((n:string) => n[0]).join('').toUpperCase() || '?';
-
-  const navItems = [
-    { id:'dashboard',    label:'Dashboard',    icon:'home',      path:'/dashboard'    },
-    { id:'appointments', label:'Appointments', icon:'calendar',  path:'/appointments' },
-    ...(isDoctor ? [{ id:'patients', label:'Patients', icon:'users', path:'/patients' }] : []),
-    { id:'assessments',  label:'Assessments',  icon:'clipboard', path:'/assessment'   },
-    { id:'progress',     label:'Progress',     icon:'chart',     path:'/progress'     },
-    { id:'settings',     label:'Settings',     icon:'settings',  path:'/settings'     },
-    { id:'messages',     label:'Messages',     icon:'message',   path:'/messages'     },
-  ];
-
-  const navBtn = (active: boolean): React.CSSProperties => ({
-    display:'flex', alignItems:'center', gap:10, padding:'9px 14px',
-    cursor:'pointer', fontSize:13, fontWeight: active ? 600 : 400,
-    color: active ? '#1e293b' : '#64748b',
-    background: active ? '#f1f5f9' : 'transparent',
-    border:'none', borderRadius:6, width:'calc(100% - 16px)', margin:'1px 8px',
-    transition:'all .15s', textAlign:'left' as const,
-  });
+  const firstName = user.fullName?.split(' ')[0] || 'there';
 
   return (
-    <div style={{ display:'flex', minHeight:'100vh', fontFamily:'system-ui,-apple-system,sans-serif' }}>
-      <aside style={{ width:200, minHeight:'100vh', background:'#fff', borderRight:'1px solid #e2e8f0', display:'flex', flexDirection:'column', position:'fixed', left:0, top:0, bottom:0, zIndex:100 }}>
-        <div style={{ padding:'18px 16px 14px', display:'flex', alignItems:'center', gap:10, borderBottom:'1px solid #f1f5f9' }}>
-          <div style={{ width:32, height:32, background:'#1e293b', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-              <path d="M12 21.7C17.3 17 22 13 22 8.5 22 5.4 19.6 3 16.5 3c-1.8 0-3.6.9-4.5 2.3C11.1 3.9 9.3 3 7.5 3 4.4 3 2 5.4 2 8.5c0 4.5 4.7 8.5 10 13.2z"/>
-            </svg>
-          </div>
-          <span style={{ fontWeight:700, fontSize:15, color:'#1e293b' }}>TheraPea</span>
+    <SidebarLayout title="Dashboard">
+      <div className="db-welcome">
+        <div className="db-welcome-text">
+          <h2>Good to see you, {isDoctor ? `Dr. ${firstName}` : firstName}</h2>
+          <p>{isDoctor ? 'Here is a summary of your practice activity today.' : 'Here is a summary of your recent activity and upcoming sessions.'}</p>
         </div>
-
-        <nav style={{ flex:1, padding:'10px 0', overflowY:'auto' }}>
-          {navItems.map(item => (
-            <button key={item.id} style={navBtn(activeNav === item.id)}
-              onClick={() => {
-                setActiveNav(item.id);
-                if (item.path !== '/dashboard') navigate(item.path);
-              }}
-              onMouseEnter={e => { if (activeNav !== item.id) (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; }}
-              onMouseLeave={e => { if (activeNav !== item.id) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}>
-              <Icon type={item.icon} size={16} />
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
-        <div style={{ borderTop:'1px solid #f1f5f9', padding:'8px 0' }}>
-          <button style={navBtn(false)} onClick={doLogout}>
-            <Icon type="logout" size={16} /> Sign Out
-          </button>
-          <button style={navBtn(activeNav === 'profile')} onClick={() => setActiveNav('profile')}>
-            <Icon type="user" size={16} /> Profile
-          </button>
-        </div>
-      </aside>
-
-      <div style={{ marginLeft:200, flex:1, background:'#f0f4f8', minHeight:'100vh', display:'flex', flexDirection:'column' }}>
-        <header style={{ background:'#fff', borderBottom:'1px solid #e2e8f0', padding:'0 24px', height:54, display:'flex', alignItems:'center', justifyContent:'space-between', position:'sticky', top:0, zIndex:50 }}>
-          <h1 style={{ margin:0, fontSize:17, fontWeight:700, color:'#1e293b' }}>
-            {activeNav.charAt(0).toUpperCase() + activeNav.slice(1)}
-          </h1>
-          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-            <div style={{ position:'relative', cursor:'pointer', color:'#64748b' }}>
-              <Icon type="bell" size={20} />
-              <div style={{ position:'absolute', top:-2, right:-2, width:8, height:8, background:'#ef4444', borderRadius:'50%', border:'2px solid #fff' }}/>
-            </div>
-            <div style={{ width:34, height:34, borderRadius:'50%', background: isDoctor ? 'linear-gradient(135deg,#2563EB,#7C3AED)' : 'linear-gradient(135deg,#6b8f6e,#4a7c59)', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:700, fontSize:13, cursor:'pointer' }}>
-              {initials}
-            </div>
-          </div>
-        </header>
-
-        <main style={{ padding:24, flex:1 }}>
-          <div style={{ background:'#fff', borderRadius:10, padding:'18px 22px', marginBottom:18, border:'1px solid #e2e8f0' }}>
-            <h2 style={{ margin:'0 0 4px', fontSize:20, fontWeight:700, color:'#1e293b' }}>
-              Welcome back, {isDoctor ? `Dr. ${firstName}` : firstName}
-            </h2>
-            <p style={{ margin:0, fontSize:13, color:'#64748b' }}>
-              {isDoctor ? "Here's your practice overview for today" : "Here's an overview of your mental health journey"}
-            </p>
-          </div>
-
-          {isDoctor
-            ? <DoctorView assessments={assessments} />
-            : <PatientView assessments={assessments} navigate={navigate} user={{ fullName: user.fullName, email: user.email, createdAt: user.createdAt }} />
-          }
-        </main>
       </div>
-    </div>
+
+      {isDoctor
+        ? <DoctorView 
+            assessments={assessments} 
+            appointments={appointments} 
+            patientsList={patientsList} 
+            navigate={navigate} 
+            onDeleteClick={setAssessmentToDelete} 
+          />
+        : <PatientView 
+            assessments={assessments} 
+            appointments={appointments} 
+            navigate={navigate} 
+            onDeleteClick={setAssessmentToDelete} 
+          />
+      }
+
+      {assessmentToDelete && (
+        <div className="db-modal-overlay" onClick={() => setAssessmentToDelete(null)}>
+          <div className="db-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="db-modal-icon"><NavIcon type="trash" /></div>
+            <h2 className="db-modal-title">Delete Assessment?</h2>
+            <p className="db-modal-text">Are you sure you want to delete this record? This action cannot be undone.</p>
+            <div className="db-modal-actions">
+              <button className="db-btn-outline" onClick={() => setAssessmentToDelete(null)}>Cancel</button>
+              <button className="db-btn-danger" onClick={handleConfirmDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </SidebarLayout>
   );
 };
 
-const PatientView: React.FC<{
-  assessments: Assessment[];
-  navigate: any;
-  user: { fullName: string; email: string; createdAt: string | null };
-}> = ({ assessments, navigate, user }) => (
-  <>
-    <div style={{ background:'#fff', borderRadius:10, padding:'18px 22px', marginBottom:18, border:'1px solid #e2e8f0' }}>
-      <h3 style={{ margin:'0 0 14px', fontSize:14, fontWeight:700, color:'#1e293b' }}>
-        Next Therapy Session
-      </h3>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-          <div style={{ width:46, height:46, borderRadius:'50%', background:'#e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', color:'#94a3b8' }}>
-            <Icon type="user" size={22} />
+/* ─── Patient View ──────────────────────────────────────────────────────── */
+const PatientView: React.FC<{ assessments: Assessment[]; appointments: Appointment[]; navigate: any; onDeleteClick: (id: string) => void }> = ({ assessments, appointments, navigate, onDeleteClick }) => {
+  const displayedAssessments = assessments.slice(0, 5);
+  const hasMoreAssessments = assessments.length > 5;
+  
+  const upcomingApt = appointments.find(a => a.status === 'Scheduled');
+  const lastCompletedApt = appointments.find(a => a.status === 'Completed');
+
+  return (
+    <>
+      <div className="db-grid-2">
+        <div className="db-section-card session-card">
+          <div className="db-section-header">
+            <span className="db-section-title">Your next session</span>
+            {upcomingApt && <span className="db-card-chip upcoming">Upcoming</span>}
           </div>
-          <div>
-            <div style={{ fontWeight:600, fontSize:15, color:'#1e293b' }}>Dr. Michael Johnson</div>
-            <div style={{ fontSize:13, color:'#64748b' }}>Clinical Psychologist</div>
-            <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:4, color:'#94a3b8' }}>
-              <Icon type="calendar" size={12} />
-              <span style={{ fontSize:12 }}>March 15, 2024 at 2:00 PM</span>
+          
+          {upcomingApt ? (
+            <div className="db-session-row">
+              <div className="db-session-left">
+                <div className="db-session-avatar">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <div>
+                  <div className="db-session-name">{upcomingApt.providerName}</div>
+                  <div className="db-session-role">{upcomingApt.providerRole || 'Licensed Therapist'}</div>
+                  <div className="db-session-date">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    {upcomingApt.date} at {upcomingApt.time}
+                  </div>
+                </div>
+              </div>
+              <button className="db-join-btn" onClick={() => navigate('/appointments')}>Join video call</button>
             </div>
+          ) : lastCompletedApt ? (
+            <div className="db-empty" style={{ padding: '20px 0', alignItems: 'flex-start', textAlign: 'left' }}>
+              <p style={{ margin: '0 0 4px 0', fontSize: 16, fontWeight: 600, color: 'var(--text-main)' }}>Time to check in?</p>
+              <span style={{ fontSize: 14, color: 'var(--text-sub)', marginBottom: '16px', display: 'block' }}>
+                Your last session with {lastCompletedApt.providerName} was on {lastCompletedApt.date}.
+              </span>
+              <button 
+                className="db-join-btn" 
+                style={{ width: 'auto', padding: '10px 20px' }}
+                onClick={() => navigate(`/therapists/${lastCompletedApt.providerId || 1}`)}
+              >
+                Book Next Session
+              </button>
+            </div>
+          ) : (
+            <div className="db-empty" style={{ padding: '20px 0' }}>
+              <p style={{ margin: 0, fontSize: 15 }}>No upcoming sessions.</p>
+              <span style={{ fontSize: 13 }}>Book an appointment to get started.</span>
+            </div>
+          )}
+        </div>
+
+        <div className="db-section-card find-care-card">
+          <div className="db-section-header">
+            <span className="db-section-title">Find Care</span>
+            <span className="db-card-chip">Cebu & Online</span>
+          </div>
+          <div className="db-find-care-content">
+            <p className="db-body-text">Search for licensed professionals in Cebu or book an online telehealth session that fits your schedule.</p>
+            <button className="db-primary-btn" onClick={() => navigate('/therapists')}>Browse Directory</button>
           </div>
         </div>
-        <button style={{ display:'flex', alignItems:'center', gap:7, background:'#1e293b', color:'#fff', border:'none', borderRadius:8, padding:'10px 18px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-          <Icon type="video" size={14} /> Join Video Call
-        </button>
-      </div>
-    </div>
-
-    <div style={{ background:'#fff', borderRadius:10, padding:'18px 22px', border:'1px solid #e2e8f0' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-        <h3 style={{ margin:0, fontSize:14, fontWeight:700, color:'#1e293b' }}>
-          Recent Triage Assessments
-        </h3>
-        <button onClick={() => navigate('/assessment')} style={{ background:'#1e293b', color:'#fff', border:'none', borderRadius:6, padding:'7px 14px', fontSize:12, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:5 }}>
-          + New Assessment
-        </button>
       </div>
 
-      {assessments.length === 0 ? (
-        <div style={{ textAlign:'center', padding:'48px 0', color:'#94a3b8' }}>
-          <div style={{ margin:'0 auto 12px', color:'#cbd5e1' }}>
-            <Icon type="clipboard" size={40} />
+      <div className="db-section-card">
+        <div className="db-section-header">
+          <div>
+            <span className="db-section-title">Recent assessments</span>
+            {assessments.length > 0 && <span className="db-count-chip">{assessments.length}</span>}
           </div>
-          <p style={{ fontSize:14, margin:'0 0 16px', fontWeight:500 }}>No assessments taken yet</p>
-          <p style={{ fontSize:13, margin:'0 0 16px', color:'#94a3b8' }}>
-            Take your first Smart Triage Assessment to understand your mental health
-          </p>
-          <button onClick={() => navigate('/assessment')} style={{ background:'#1e293b', color:'#fff', border:'none', borderRadius:8, padding:'10px 20px', fontSize:13, fontWeight:600, cursor:'pointer' }}>
-            Take Assessment
-          </button>
+          <button className="db-new-btn" onClick={() => navigate('/assessment')}>+ New assessment</button>
         </div>
-      ) : (
-        <div style={{ overflowX:'auto' }}>
-          <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead>
-              <tr>
-                {['Date','Assessment Type','Risk Score','Status','Actions'].map(h => (
-                  <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.5px', borderBottom:'1px solid #f1f5f9' }}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {assessments.map(a => {
-                const rb = riskBadge(a.riskLevel);
-                const sb = statusBadge(a.status);
-                return (
-                  <tr key={a.id} onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = '#fafbfc'} onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
-                    <td style={{ padding:'13px 14px', fontSize:13, color:'#475569', borderBottom:'1px solid #f8fafc' }}>
-                      {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' }) : 'N/A'}
-                    </td>
-                    <td style={{ padding:'13px 14px', fontSize:13, color:'#1e293b', fontWeight:500, borderBottom:'1px solid #f8fafc' }}>
-                      {a.assessmentType}
-                    </td>
-                    <td style={{ padding:'13px 14px', borderBottom:'1px solid #f8fafc' }}>
-                      <span style={{ background:rb.bg, color:rb.color, padding:'3px 10px', borderRadius:12, fontSize:12, fontWeight:600 }}>
-                        {a.riskLevel} ({a.clinicalScore})
+
+        {assessments.length === 0 ? (
+          <div className="db-empty">
+            <div className="db-empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+            </div>
+            <p>No assessments yet</p>
+            <span>Take your first Triage Assessment to get a picture of how you've been feeling.</span>
+            <br />
+            <button className="db-take-btn" onClick={() => navigate('/assessment')}>Take an assessment</button>
+          </div>
+        ) : (
+          <div className="db-table-wrap">
+            <table>
+              <thead>
+                <tr>{['Date', 'Assessment', 'Risk score', 'Status', 'Actions'].map(h => <th key={h}>{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {displayedAssessments.map(a => (
+                  <tr key={a.id}>
+                    <td className="db-td-muted">{a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</td>
+                    <td className="db-td-strong">{a.assessmentType}</td>
+                    <td>
+                      <span className="db-risk-badge" style={riskStyle(a.riskLevel)}>
+                        {a.riskLevel} <span style={{ opacity: 0.6 }}>·</span> {a.clinicalScore}
                       </span>
                     </td>
-                    <td style={{ padding:'13px 14px', borderBottom:'1px solid #f8fafc' }}>
-                      <span style={{ background:sb.bg, color:sb.color, padding:'3px 10px', borderRadius:12, fontSize:12, fontWeight:600 }}>
-                        {a.status}
-                      </span>
-                    </td>
-                    <td style={{ padding:'13px 14px', borderBottom:'1px solid #f8fafc' }}>
-                      <button style={{ background:'none', border:'none', cursor:'pointer', color:'#94a3b8', padding:4, borderRadius:4 }} title="View">
-                        <Icon type="eye" size={15} />
-                      </button>
+                    <td><span className="db-status-badge" style={statusStyle(a.status)}>{a.status}</span></td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="db-action-btn" title="View details" onClick={() => navigate(`/assessment-result/${a.id}`, { state: { result: a } })}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                        <button className="db-action-btn danger" title="Delete" onClick={() => onDeleteClick(a.id)}>
+                          <NavIcon type="trash" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  </>
-);
+                ))}
+              </tbody>
+            </table>
+            {hasMoreAssessments && (
+              <div style={{ textAlign: 'center', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+                <button className="db-btn-outline" onClick={() => navigate('/assessments-history')}>Show all assessments</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
 
-const DoctorView: React.FC<{ assessments: Assessment[] }> = ({ assessments }) => {
-  const pending   = assessments.filter(a => a.status === 'Pending');
-  const reviewed  = assessments.filter(a => a.status === 'Reviewed');
+/* ─── Doctor View ───────────────────────────────────────────────────────── */
+const DoctorView: React.FC<{ assessments: Assessment[]; appointments: Appointment[]; patientsList: PatientRecord[]; navigate: any; onDeleteClick: (id: string) => void }> = ({ assessments, appointments, patientsList, navigate }) => {
+  
+  // THE TRIAGE QUEUE LOGIC 
+  const pending = assessments.filter(a => a.status === 'Pending').sort((a, b) => {
+    const riskWeight: Record<string, number> = { High: 4, Moderate: 3, Mild: 2, Low: 1 };
+    const weightA = riskWeight[a.riskLevel] || 0;
+    const weightB = riskWeight[b.riskLevel] || 0;
+    if (weightA !== weightB) return weightB - weightA;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
-  const statCards = [
-    { label: "Today's Appointments", value: '8',  color: '#dbeafe', text: '#1e40af' },
-    { label: 'Total Patients',       value: '124', color: '#f3e8ff', text: '#7e22ce' },
-    { label: 'Pending Reviews',      value: pending.length.toString(), color: '#fef9c3', text: '#854d0e' },
-    { label: 'Average Rating',       value: '4.9', color: '#dcfce7', text: '#15803d' },
+  const displayedPending = pending.slice(0, 5);
+  const hasMorePending = pending.length > 5;
+  const highRiskCount = pending.filter(a => a.riskLevel === 'High' || a.riskLevel === 'Moderate').length;
+
+  const upcomingAppointments = appointments.filter(a => a.status === 'Scheduled');
+  const displayedAppointments = upcomingAppointments.slice(0, 3);
+  const hasMoreAppointments = upcomingAppointments.length > 3;
+
+  const stats = [
+    { label: "Upcoming appointments", value: String(upcomingAppointments.length), icon: 'calendar', accent: 'sage'    },
+    { label: 'Total patients',        value: String(patientsList.length),         icon: 'users',    accent: 'lavender' },
+    { label: 'Pending reviews',       value: String(pending.length),              icon: 'clipboard', accent: pending.length > 0 ? 'amber' : 'sage' },
+    { label: 'Urgent alerts',         value: String(highRiskCount),               icon: 'bell',     accent: highRiskCount > 0 ? 'red' : 'teal' },
   ];
 
   return (
     <>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:14, marginBottom:18 }}>
-        {statCards.map(s => (
-          <div key={s.label} style={{ background:'#fff', borderRadius:10, padding:'16px 20px', border:'1px solid #e2e8f0' }}>
-            <div style={{ fontSize:28, fontWeight:800, color:'#1e293b', marginBottom:4 }}>{s.value}</div>
-            <div style={{ fontSize:12, color:'#64748b' }}>{s.label}</div>
+      <div className="db-stats-grid">
+        {stats.map(s => (
+          <div key={s.label} className={`db-stat-card accent-${s.accent}`}>
+            <div className="db-stat-icon"><NavIcon type={s.icon} /></div>
+            <div className="db-stat-val">{s.value}</div>
+            <div className="db-stat-label">{s.label}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ background:'#fff', borderRadius:10, padding:'18px 22px', border:'1px solid #e2e8f0' }}>
-        <h3 style={{ margin:'0 0 16px', fontSize:14, fontWeight:700, color:'#1e293b' }}>
-          Pending Assessment Reviews
-          {pending.length > 0 && (
-            <span style={{ marginLeft:8, background:'#fee2e2', color:'#991b1b', fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:10 }}>
-              {pending.length}
-            </span>
-          )}
-        </h3>
-        {pending.length === 0 ? (
-          <div style={{ textAlign:'center', padding:'32px', color:'#94a3b8', fontSize:13 }}>
-            <Icon type="check" size={32} />
-            <p style={{ marginTop:8 }}>All assessments reviewed — great work!</p>
+      <div className="db-grid-2">
+        <div className="db-section-card" style={{ marginBottom: 0 }}>
+          <div className="db-section-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span className="db-section-title">Triage Queue</span>
+              {pending.length > 0 && <span className="db-pending-badge">{pending.length} pending</span>}
+            </div>
           </div>
+          {pending.length === 0 ? (
+            <div className="db-empty" style={{ padding: '24px 0' }}>
+              <div className="db-empty-icon success"><NavIcon type="check" /></div>
+              <p>All caught up</p>
+              <span>No pending assessments to review.</span>
+            </div>
+          ) : (
+            <div className="db-triage-list">
+              {displayedPending.map(a => (
+                <div key={a.id} className={`db-triage-item ${a.riskLevel === 'High' ? 'urgent' : ''}`}>
+                  <div className="db-triage-top">
+                    <span className="db-triage-date">{a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}</span>
+                    <span className="db-risk-badge" style={riskStyle(a.riskLevel)}>{a.riskLevel} Risk</span>
+                  </div>
+                  <div className="db-triage-type">
+                    <strong style={{ color: 'var(--text-main)' }}>{a.patientName || 'Unknown Patient'}</strong> • {a.assessmentType}
+                  </div>
+                  <div className="db-triage-actions">
+                    <button className="db-action-btn" title="View details" onClick={() => navigate(`/assessment-result/${a.id}`, { state: { result: a } })}>View Results</button>
+                    <button className="db-mark-btn" onClick={async () => {
+                      await fetch(`http://localhost:8083/api/assessments/${a.id}/review`, { method: 'PATCH' });
+                      window.location.reload();
+                    }}>
+                      <NavIcon type="check" /> Mark Reviewed
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {hasMorePending && (
+                <button className="db-btn-text" onClick={() => navigate('/assessments-history')} style={{ marginTop: 12, width: '100%' }}>View all {pending.length} pending</button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="db-section-card" style={{ marginBottom: 0 }}>
+          <div className="db-section-header">
+            <span className="db-section-title">Upcoming Schedule</span>
+            <button className="db-action-btn" onClick={() => navigate('/appointments')}><NavIcon type="calendar" /></button>
+          </div>
+          <div className="db-schedule-list">
+            {upcomingAppointments.length === 0 ? (
+               <div className="db-empty" style={{ padding: '24px 0' }}><p>No upcoming appointments.</p></div>
+            ) : (
+              displayedAppointments.map(apt => (
+                <div key={apt.id} className="db-schedule-item">
+                  <div className="db-sch-time">
+                    <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)' }}>{apt.date}</span>
+                    {apt.time}
+                  </div>
+                  <div className="db-sch-details">
+                    <div className="db-sch-name">{apt.patientName}</div>
+                    <div className="db-sch-type">{apt.type}</div>
+                  </div>
+                  {apt.type === 'Telehealth' ? (
+                    <button className="db-join-btn small" onClick={() => navigate('/appointments')}><NavIcon type="video" /> Join</button>
+                  ) : (
+                    <span className="db-card-chip" style={{ background: '#F3F4F6', color: '#4B5563' }}>Clinic</span>
+                  )}
+                </div>
+              ))
+            )}
+            
+            {hasMoreAppointments && (
+              <button 
+                className="db-btn-text" 
+                onClick={() => navigate('/appointments')} 
+                style={{ marginTop: 12, width: '100%' }}
+              >
+                View all {upcomingAppointments.length} appointments
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="db-section-card" style={{ marginTop: 24 }}>
+        <div className="db-section-header">
+          <span className="db-section-title">Recent Patients</span>
+          <button className="db-btn-outline" style={{ padding: '6px 16px', fontSize: 13 }} onClick={() => navigate('/patients')}>View All</button>
+        </div>
+        {patientsList.length === 0 ? (
+          <div className="db-empty" style={{ padding: '24px 0' }}><p>No active patients.</p></div>
         ) : (
-          <table style={{ width:'100%', borderCollapse:'collapse' }}>
-            <thead>
-              <tr>
-                {['Date','Assessment Type','Risk Score','Clinical Score','Action'].map(h => (
-                  <th key={h} style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', borderBottom:'1px solid #f1f5f9' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {pending.map(a => {
-                const rb = riskBadge(a.riskLevel);
-                return (
-                  <tr key={a.id}>
-                    <td style={{ padding:'13px 14px', fontSize:13, color:'#475569', borderBottom:'1px solid #f8fafc' }}>
-                      {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : 'N/A'}
-                    </td>
-                    <td style={{ padding:'13px 14px', fontSize:13, color:'#1e293b', fontWeight:500, borderBottom:'1px solid #f8fafc' }}>
-                      {a.assessmentType}
-                    </td>
-                    <td style={{ padding:'13px 14px', borderBottom:'1px solid #f8fafc' }}>
-                      <span style={{ background:rb.bg, color:rb.color, padding:'3px 10px', borderRadius:12, fontSize:12, fontWeight:600 }}>
-                        {a.riskLevel}
+          <div className="db-table-wrap">
+            <table>
+              <thead>
+                <tr><th>Patient Name</th><th>Status</th><th>Last Session</th><th>Action</th></tr>
+              </thead>
+              <tbody>
+                {patientsList.slice(0, 3).map((p) => (
+                  <tr key={p.id}>
+                    <td className="db-td-strong">{p.name}</td>
+                    <td>
+                      <span className="db-status-badge" style={{ background: p.status === 'Active' ? '#ECFDF5' : '#EFF6FF', color: p.status === 'Active' ? '#065F46' : '#1D4ED8' }}>
+                        {p.status}
                       </span>
                     </td>
-                    <td style={{ padding:'13px 14px', fontSize:13, color:'#1e293b', fontWeight:600, borderBottom:'1px solid #f8fafc' }}>
-                      {a.clinicalScore}/100
-                    </td>
-                    <td style={{ padding:'13px 14px', borderBottom:'1px solid #f8fafc' }}>
-                      <button
-                        onClick={async () => {
-                          await fetch(`http://localhost:8083/api/assessments/${a.id}/review`, { method:'PATCH' });
-                          window.location.reload();
-                        }}
-                        style={{ background:'#1e293b', color:'#fff', border:'none', borderRadius:6, padding:'5px 12px', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                        Mark Reviewed
-                      </button>
+                    <td className="db-td-muted">{p.lastSession}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="db-action-btn">Open File</button>
+                        <button className="db-action-btn" style={{ background: 'var(--bg-alt)', color: 'var(--text-main)', border: '1px solid var(--border)' }}>Schedule Follow-up</button>
+                      </div>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </>
