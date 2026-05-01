@@ -103,13 +103,11 @@ public class AuthController {
             @RequestParam("hourlyRate")  String hourlyRate,
             @RequestParam("prcLicense")  MultipartFile prcLicense) {
         try {
-            System.out.println("📋 Doctor verification received for: " + email);
-            System.out.println("   Bio: "  + clinicalBio);
-            System.out.println("   Rate: " + hourlyRate);
-            System.out.println("   File: " + prcLicense.getOriginalFilename() +
-                    " (" + prcLicense.getSize() + " bytes)");
+            UserEntity user = userService.findByEmail(email);
+            user.setClinicalBio(clinicalBio);
+            user.setHourlyRate(Double.parseDouble(hourlyRate));
 
-            // TODO: save file + metadata to DB/storage
+            userService.saveUser(user);
 
             return ResponseEntity.ok(Map.of(
                     "success", true,

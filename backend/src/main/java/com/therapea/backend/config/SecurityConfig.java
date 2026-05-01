@@ -26,7 +26,12 @@ public class SecurityConfig {
                                 "/error",
                                 "/api/auth/**",
                                 "/api/dashboard/**",
-                                "/api/assessments/**" // <-- ADDED THIS to allow quiz submissions
+                                "/api/assessments/**",
+                                "/api/doctors/**",
+                                "/api/appointments/**",
+                                "/api/patients/**",
+                                "/api/messages/**",
+                                "/api/users/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 );
