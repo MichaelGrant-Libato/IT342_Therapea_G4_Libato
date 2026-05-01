@@ -1,0 +1,434 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+/* ── Container ── */
+.tp-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 0 60px 0;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text-main);
+}
+
+/* ── Loader & Error ── */
+.tp-loader-wrap { 
+  display: flex; 
+  flex-direction: column;
+  align-items: center; 
+  justify-content: center; 
+  padding-top: 100px; 
+  color: var(--text-muted);
+  gap: 16px;
+}
+
+.tp-error-state {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.tp-error-state h2 {
+  font-family: 'Lora', serif;
+  color: var(--text-main);
+  margin-bottom: 8px;
+}
+
+.tp-error-state p {
+  color: var(--text-sub);
+  margin-bottom: 24px;
+}
+
+.tp-btn-outline {
+  background-color: transparent;
+  color: var(--text-sub);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 10px 24px;
+  transition: all 0.2s;
+}
+
+.tp-btn-outline:hover {
+  background: var(--surface);
+  border-color: var(--text-main);
+  color: var(--text-main);
+}
+
+/* ── Back Navigation ── */
+.tp-back-link {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 14.5px;
+  cursor: pointer;
+  margin-bottom: 24px;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.tp-back-link:hover {
+  color: var(--text-main);
+}
+
+/* ── Profile Layout Grid ── */
+.tp-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 32px;
+  align-items: start;
+}
+
+/* ── Hero Section ── */
+.tp-hero-section {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  padding: 40px;
+  display: flex;
+  gap: 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+}
+
+.tp-avatar-lg {
+  width: 120px; 
+  height: 120px; 
+  border-radius: 28px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  font-size: 42px; 
+  font-weight: 800; 
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(122, 158, 120, 0.2);
+}
+
+.tp-hero-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.tp-verified-badge {
+  display: inline-flex; 
+  align-items: center; 
+  gap: 6px;
+  background: var(--primary-light); 
+  color: var(--primary-dark);
+  font-size: 11px; 
+  font-weight: 800; 
+  text-transform: uppercase;
+  padding: 6px 12px; 
+  border-radius: 8px; 
+  letter-spacing: 0.05em;
+  width: max-content;
+}
+
+.tp-hero-text h1 {
+  font-family: 'Lora', serif; 
+  font-size: 34px; 
+  font-weight: 700;
+  margin: 16px 0 6px 0;
+  color: var(--text-main); 
+  letter-spacing: -0.02em;
+}
+
+.tp-title-tag { 
+  color: var(--text-sub); 
+  font-size: 17px; 
+  font-weight: 500; 
+  margin: 0 0 16px 0; 
+}
+
+.tp-meta-pills { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  color: var(--text-muted); 
+  font-size: 14.5px; 
+  font-weight: 600; 
+}
+
+.tp-meta-pills .dot { 
+  opacity: 0.4; 
+}
+
+/* ── Content Sections (Bio & Expectations) ── */
+.tp-bio-section, .tp-expectation-section {
+  background: var(--surface); 
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px; 
+  padding: 40px; 
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+}
+
+.tp-section-h { 
+  font-family: 'Lora', serif; 
+  font-size: 24px; 
+  font-weight: 700;
+  margin: 0 0 20px 0; 
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.tp-sub-h { 
+  font-size: 12px; 
+  text-transform: uppercase; 
+  letter-spacing: 0.1em; 
+  color: var(--text-muted); 
+  margin: 40px 0 16px 0; 
+  font-weight: 800; 
+}
+
+.tp-description { 
+  font-size: 16px; 
+  line-height: 1.8; 
+  color: var(--text-sub); 
+  margin: 0;
+}
+
+/* ── Focus Tags ── */
+.tp-focus-tags { 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 12px; 
+}
+
+.tp-focus-pill { 
+  background: var(--bg-alt); 
+  border: 1px solid var(--border);
+  padding: 10px 20px; 
+  border-radius: 12px; 
+  font-size: 14.5px; 
+  font-weight: 600; 
+  color: var(--text-main);
+  transition: border-color 0.2s;
+}
+
+.tp-focus-pill:hover {
+  border-color: var(--primary);
+}
+
+/* ── Expectations Grid ── */
+.tp-expect-grid { 
+  display: grid; 
+  grid-template-columns: 1fr 1fr; 
+  gap: 32px 24px; 
+  margin-top: 32px; 
+}
+
+.tp-expect-item { 
+  display: flex; 
+  gap: 16px; 
+  align-items: flex-start; 
+}
+
+.tp-expect-icon { 
+  font-size: 28px; 
+  background: var(--bg-alt);
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.tp-expect-text strong { 
+  display: block; 
+  font-size: 16px; 
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 6px; 
+}
+
+.tp-expect-text p { 
+  font-size: 14.5px; 
+  color: var(--text-sub); 
+  line-height: 1.6; 
+  margin: 0;
+}
+
+/* ── Sticky Booking Sidebar ── */
+.tp-side-col {
+  position: relative;
+}
+
+.tp-booking-card {
+  background: var(--text-main);
+  border-radius: 28px; 
+  padding: 40px 32px; 
+  color: white;
+  position: sticky; 
+  top: 32px;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.15);
+}
+
+.tp-card-price { 
+  margin-bottom: 32px; 
+  padding-bottom: 32px; 
+  border-bottom: 1px solid rgba(255,255,255,0.1); 
+}
+
+.tp-card-price .label { 
+  font-size: 12px; 
+  text-transform: uppercase; 
+  opacity: 0.6; 
+  font-weight: 800; 
+  letter-spacing: 0.1em; 
+  display: block;
+  margin-bottom: 8px;
+}
+
+.tp-card-price .amount { 
+  font-size: 40px; 
+  font-weight: 700; 
+  font-family: 'Lora', serif; 
+  line-height: 1;
+}
+
+.tp-card-price small { 
+  font-size: 16px; 
+  opacity: 0.5; 
+  font-weight: 500; 
+  font-family: 'DM Sans', sans-serif;
+  margin-left: 6px; 
+}
+
+.tp-perks { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 20px; 
+  margin-bottom: 40px; 
+}
+
+.perk-item { 
+  display: flex; 
+  align-items: center; 
+  gap: 16px; 
+  font-size: 15px; 
+  font-weight: 600; 
+  opacity: 0.95; 
+}
+
+.perk-item svg { 
+  color: var(--primary-light); 
+}
+
+.tp-btn-book-now {
+  width: 100%; 
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white; 
+  border: none;
+  padding: 20px; 
+  border-radius: 16px; 
+  font-weight: 700; 
+  font-size: 16px;
+  cursor: pointer; 
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(122, 158, 120, 0.3);
+}
+
+.tp-btn-book-now:hover { 
+  transform: translateY(-2px); 
+  box-shadow: 0 8px 24px rgba(122, 158, 120, 0.4);
+}
+
+.tp-disclaimer { 
+  font-size: 13px; 
+  opacity: 0.5; 
+  text-align: center; 
+  margin: 24px 0 0 0; 
+  line-height: 1.5; 
+}
+
+/* ── Responsive Rules ── */
+@media (max-width: 1024px) {
+  .tp-profile-grid { 
+    grid-template-columns: 1fr; 
+  }
+  
+  .tp-hero-section { 
+    flex-direction: column; 
+    text-align: center; 
+    align-items: center; 
+    padding: 40px 24px;
+  }
+
+  .tp-hero-text {
+    align-items: center;
+  }
+  
+  .tp-side-col { 
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    width: 100%; 
+    padding: 16px; 
+    background: var(--surface); 
+    z-index: 100; 
+    border-top: 1px solid var(--border); 
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+  }
+  
+  .tp-booking-card { 
+    position: static; 
+    padding: 20px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    max-width: 100%; 
+    border-radius: 16px;
+    box-shadow: none;
+  }
+  
+  .tp-perks, .tp-card-price .label, .tp-disclaimer { 
+    display: none; 
+  }
+  
+  .tp-card-price { 
+    border: none; 
+    margin: 0; 
+    padding: 0; 
+    color: white; 
+  }
+  
+  .tp-card-price .amount {
+    font-size: 24px;
+  }
+
+  .tp-card-price small {
+    font-size: 14px;
+  }
+
+  .tp-btn-book-now { 
+    width: auto; 
+    padding: 14px 32px; 
+  }
+}
+
+@media (max-width: 640px) {
+  .tp-expect-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tp-booking-card {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+
+  .tp-btn-book-now {
+    width: 100%;
+  }
+}
