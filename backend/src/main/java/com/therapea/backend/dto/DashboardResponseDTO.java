@@ -13,6 +13,9 @@ public class DashboardResponseDTO {
     public String createdAt;
     public String lastLogin;
 
+    // 🔴 Changed from private to public!
+    public String profilePictureUrl;
+
     // Dynamic Data
     public List<StatDTO> stats;
     public List<SessionDTO> sessions;

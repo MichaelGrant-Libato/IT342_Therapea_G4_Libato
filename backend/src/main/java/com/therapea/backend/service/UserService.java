@@ -71,4 +71,19 @@ public class UserService {
     public UserEntity getUserByEmail(String email) {
         return userRepository.findByEmail(email).orElse(null);
     }
+
+    // 🔴 NEW: Securely change the user's password
+    public void changePassword(String email, String oldPassword, String newPassword) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+
+        // 1. Verify the old password matches the database
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new RuntimeException("Incorrect current password.");
+        }
+
+        // 2. Encrypt the new password and save it
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
 }
