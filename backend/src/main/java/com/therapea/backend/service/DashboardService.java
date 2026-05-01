@@ -20,7 +20,6 @@ public class DashboardService {
     public DashboardResponseDTO getDashboardData(UserEntity user) {
         DashboardResponseDTO response = new DashboardResponseDTO();
 
-        // Map user profile details
         response.success = true;
         response.userId = user.getId().toString();
         response.email = user.getEmail();
@@ -30,6 +29,7 @@ public class DashboardService {
         response.profileCompleted = user.isProfileCompleted();
         response.createdAt = user.getCreatedAt() != null ? user.getCreatedAt().toString() : null;
         response.lastLogin = user.getLastLogin() != null ? user.getLastLogin().toString() : null;
+        response.profilePictureUrl = user.getProfilePictureUrl();
 
         UUID userId = user.getId();
 
@@ -39,14 +39,27 @@ public class DashboardService {
                 .map(s -> new StatDTO(s.getIconKey(), s.getColor(), s.getStatValue(), s.getLabel(), s.getChangeStr(), s.isPositive()))
                 .collect(Collectors.toList());
 
-        // 2. Fetch & Map Appointments
+        // 2. UPDATED: Fetch & Map Appointments with role-based naming
         List<AppointmentEntity> apptEntities = appointmentRepo.findByUserId(userId);
         response.sessions = apptEntities.stream()
                 .map(a -> {
                     List<TagDTO> tags = a.getTags().stream()
                             .map(t -> new TagDTO(t.getLabel(), t.getCssClass()))
                             .collect(Collectors.toList());
-                    return new SessionDTO(a.getDisplayDate(), a.getDisplayTime(), a.getProviderOrPatientName(), a.getAppointmentType(), tags, a.isToday());
+
+                    // Determine which name to show based on the user's role
+                    String displayName = user.getRole().equalsIgnoreCase("DOCTOR")
+                            ? a.getPatientName()
+                            : a.getProviderName();
+
+                    return new SessionDTO(
+                            a.getDisplayDate(),
+                            a.getDisplayTime(),
+                            displayName,
+                            a.getAppointmentType(),
+                            tags,
+                            a.isToday()
+                    );
                 }).collect(Collectors.toList());
 
         // 3. Fetch & Map Progress

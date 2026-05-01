@@ -1,0 +1,22 @@
+.msg-container { display: flex; height: calc(100vh - 150px); background: var(--surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); overflow: hidden; box-shadow: var(--shadow-sm); }
+.msg-sidebar { width: 320px; border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; }
+.msg-search-box { padding: 16px; border-bottom: 1px solid var(--border-subtle); }
+.msg-search-box input { width: 100%; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--border); outline: none; background: var(--bg); }
+.msg-contact { display: flex; gap: 12px; padding: 16px; cursor: pointer; border-bottom: 1px solid var(--border-subtle); transition: background 0.2s; }
+.msg-contact:hover { background: var(--bg); }
+.msg-contact.active { background: var(--primary-light); border-left: 3px solid var(--primary); }
+.msg-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+.msg-info { flex: 1; overflow: hidden; }
+.msg-name-time { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.msg-name-time h4 { margin: 0; font-size: 14px; color: var(--text-main); }
+.msg-name-time span { font-size: 11px; color: var(--text-muted); }
+.msg-info p { margin: 0; font-size: 13px; color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-chat-area { flex: 1; display: flex; flex-direction: column; background: var(--bg); }
+.msg-chat-header { padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 12px; }
+.msg-history { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; }
+.msg-bubble { max-width: 70%; padding: 12px 16px; border-radius: 16px; font-size: 14.5px; line-height: 1.5; }
+.msg-bubble.received { background: var(--surface); color: var(--text-main); border: 1px solid var(--border-subtle); align-self: flex-start; border-bottom-left-radius: 4px; }
+.msg-bubble.sent { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+.msg-input-area { padding: 16px 24px; background: var(--surface); border-top: 1px solid var(--border-subtle); display: flex; gap: 12px; }
+.msg-input-area input { flex: 1; padding: 12px 16px; border-radius: 999px; border: 1px solid var(--border); outline: none; }
+.msg-input-area button { background: var(--text-main); color: white; border: none; padding: 0 24px; border-radius: 999px; font-weight: 600; cursor: pointer; }

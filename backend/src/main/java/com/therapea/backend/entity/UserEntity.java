@@ -50,6 +50,15 @@ public class UserEntity {
     @Column
     private boolean profileCompleted = false;
 
+    @Column(columnDefinition = "TEXT")
+    private String clinicalBio;
+
+    @Column
+    private Double hourlyRate;
+
+    @Column(name = "profile_picture_url")
+    private String profilePictureUrl;
+
     // Getters and Setters
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
@@ -79,4 +88,10 @@ public class UserEntity {
     public void setCompletedAt(LocalDateTime completedAt) { this.completedAt = completedAt; }
     public boolean isProfileCompleted() { return profileCompleted; }
     public void setProfileCompleted(boolean profileCompleted) { this.profileCompleted = profileCompleted; }
+    public String getClinicalBio() { return clinicalBio; }
+    public void setClinicalBio(String clinicalBio) { this.clinicalBio = clinicalBio; }
+    public Double getHourlyRate() { return hourlyRate; }
+    public void setHourlyRate(Double hourlyRate) { this.hourlyRate = hourlyRate; }
+    public String getProfilePictureUrl() { return profilePictureUrl; }
+    public void setProfilePictureUrl(String profilePictureUrl) { this.profilePictureUrl = profilePictureUrl; }
 }

@@ -1,0 +1,162 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+/* ── Base Variables ── */
+:root {
+  --primary:       #7A9E78;   
+  --primary-light: #EEF4EE;
+  --primary-dark:  #527050;
+  
+  --bg:            #F5F6F2;   
+  --surface:       #FFFFFF;
+
+  --text-main:     #1C1F1A;
+  --text-sub:      #4A5047;
+  --text-muted:    #7A8077;
+  --border:        #E4E6DF;
+  --border-subtle: #ECEEE8;
+
+  --radius-sm:  10px;
+  --radius-md:  16px;
+  --radius-lg:  20px;
+  --radius-xl:  28px;
+}
+
+.co-container {
+  max-width: 750px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text-main);
+}
+
+.co-layout { transition: filter 0.3s ease; }
+.co-layout.blurred { filter: blur(8px); pointer-events: none; }
+
+/* ── Wizard Header & Progress ── */
+.co-header-wizard { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+.co-btn-back-minimal { background: none; border: none; display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-weight: 600; font-size: 14px; cursor: pointer; padding: 0; transition: color 0.2s; }
+.co-btn-back-minimal:hover { color: var(--text-main); }
+.co-steps-stepper { display: flex; align-items: center; gap: 12px; }
+.step-item { width: 34px; height: 34px; border-radius: 50%; background: var(--border-subtle); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; transition: all 0.3s ease; }
+.step-item.active { background: var(--text-main); color: white; }
+.step-item.done { background: var(--primary); color: white; }
+.step-line { width: 40px; height: 2px; background: var(--border-subtle); }
+
+/* ── Step Typography ── */
+.co-step-title { font-family: 'Lora', serif; font-size: 34px; text-align: center; margin-bottom: 40px; color: var(--text-main); letter-spacing: -0.02em; }
+.co-card { background: white; border: 1px solid var(--border-subtle); border-radius: 28px; padding: 48px; box-shadow: 0 10px 40px rgba(0,0,0,0.03); }
+.co-card-header h2 { font-family: 'Lora', serif; font-size: 24px; margin: 0 0 8px 0; }
+.co-card-header p { color: var(--text-muted); font-size: 16px; margin-bottom: 32px; }
+
+/* ── Step 1: Option Grid ── */
+.co-options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 40px; }
+.co-option-card { border: 2px solid var(--border-subtle); border-radius: 18px; padding: 24px; cursor: pointer; display: flex; align-items: center; gap: 16px; font-weight: 600; transition: all 0.2s ease; background: var(--surface); }
+.co-option-card:hover { border-color: var(--primary); }
+.co-option-card.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); }
+.option-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.co-option-card.selected .option-check { background: var(--primary); border-color: var(--primary); color: white; }
+
+/* ── Form Inputs ── */
+.co-input-group { margin-bottom: 32px; }
+.co-input-group label { display: block; font-weight: 700; margin-bottom: 12px; font-size: 14px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.05em; }
+.co-input-group textarea { width: 100%; min-height: 140px; border-radius: 16px; border: 1px solid var(--border); padding: 20px; font-family: inherit; font-size: 15px; resize: none; background: #fafafa; outline: none; transition: border-color 0.2s; }
+.co-input-group textarea:focus { border-color: var(--primary); background: white; }
+
+/* ── Step 2 Calendar ── */
+.co-calendar-wizard-container { display: flex; flex-direction: column; gap: 32px; }
+.co-calendar-wrap { border: 1px solid var(--border); border-radius: 20px; padding: 24px; background: var(--surface); }
+.co-calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.co-cal-month-wrap { display: flex; align-items: center; justify-content: center; }
+.co-cal-month { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 18px; color: var(--text-main); cursor: pointer; padding: 6px 16px; border-radius: 8px; transition: background-color 0.2s; }
+.co-cal-month:hover { background-color: #fafafa; }
+.co-quick-date-input { font-family: inherit; font-size: 15px; font-weight: 600; color: var(--text-main); padding: 6px 12px; border: 2px solid var(--primary); border-radius: 8px; outline: none; }
+.co-cal-nav { background: transparent; border: 1px solid var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; cursor: pointer; color: var(--text-sub); transition: all 0.2s; }
+.co-cal-nav:hover { background: #fafafa; color: var(--primary); border-color: var(--primary); }
+
+.co-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; }
+.co-cal-day-name { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; }
+.co-cal-day { background: transparent; border: none; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; color: var(--text-main); height: 44px; width: 100%; border-radius: 50%; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; }
+.co-cal-day:hover:not(.disabled):not(.selected):not(.fully-booked) { background: #fafafa; color: var(--primary-dark); }
+.co-cal-day.empty { pointer-events: none; }
+.co-cal-day.disabled { color: #d1d5db; text-decoration: line-through; cursor: not-allowed; }
+.co-cal-day.selected { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(122, 158, 120, 0.4); }
+
+.co-cal-day.fully-booked {
+  color: #9ca3af;
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.co-alert-box.warning {
+  background-color: #FFFBEB;
+  border: 1px solid #FEF08A;
+  color: #92400E;
+  padding: 16px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  animation: slideUp 0.3s ease-out;
+}
+
+/* ── Time Picker ── */
+.co-time-picker { margin-top: 12px; opacity: 0; transform: translateY(10px); transition: all 0.4s ease; display: none; }
+.co-time-picker.visible { opacity: 1; transform: translateY(0); display: block; }
+.co-time-picker h3 { font-size: 13px; font-weight: 800; text-transform: uppercase; color: var(--text-muted); margin-bottom: 20px; letter-spacing: 0.1em; text-align: center; }
+.co-time-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 12px; }
+.co-time-btn { padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: white; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 14px; }
+.co-time-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.co-time-btn.selected { background: var(--text-main); color: white; border-color: var(--text-main); }
+.co-time-btn:disabled { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; cursor: not-allowed; }
+.co-time-btn.booked { background: #f3f4f6; color: #9ca3af; text-decoration: line-through; cursor: not-allowed; border-color: transparent; }
+
+/* ── Step 3 Review & Payment Radios ── */
+.co-review-summary { background: #f9f9f7; padding: 32px; border-radius: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
+.summary-item label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 800; }
+.summary-item p { font-size: 18px; font-weight: 600; margin-top: 4px; color: var(--text-main); }
+.co-format-toggle { display: flex; background: #eee; padding: 6px; border-radius: 14px; }
+.format-option { flex: 1; text-align: center; padding: 14px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; transition: 0.2s; }
+.format-option.active { background: white; color: var(--text-main); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+
+.co-payment-selections { display: flex; flex-direction: column; gap: 12px; }
+.co-payment-radio { display: flex; align-items: center; gap: 16px; padding: 20px; border: 2px solid var(--border-subtle); border-radius: var(--radius-md); cursor: pointer; background: var(--surface); transition: all 0.2s ease; }
+.co-payment-radio:hover { border-color: var(--border); }
+.co-payment-radio.active { border-color: var(--primary); background-color: var(--primary-light); }
+.co-payment-radio input[type="radio"] { width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer; }
+.co-payment-label-text { display: flex; flex-direction: column; gap: 4px; }
+.co-payment-name { font-size: 15px; font-weight: 700; color: var(--text-main); }
+.co-payment-hint { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+
+.co-price-card { border-top: 2px solid var(--border-subtle); padding-top: 32px; margin-bottom: 40px; }
+.price-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 16px; }
+.price-row.total { font-size: 28px; font-weight: 800; color: var(--text-main); margin-top: 20px; font-family: 'Lora', serif; }
+
+/* ── Success UI ── */
+.co-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(28, 31, 26, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 24px; }
+.co-modal-card { background: var(--surface); border-radius: var(--radius-xl); padding: 48px; width: 100%; max-width: 480px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+.success-check-circle { width: 90px; height: 90px; background: var(--primary-light); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 44px; margin: 0 auto 32px auto; }
+.redirect-text { font-weight: 600; color: var(--primary); margin-top: 24px; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.animate-in { animation: slideUp 0.5s ease-out forwards; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+.scale-in { animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.co-error-text { color: #d93025; font-size: 14px; font-weight: 600; margin-top: 16px; text-align: center; }
+
+.co-btn-primary-large { width: 100%; background: var(--text-main); color: white; border: none; padding: 20px; border-radius: 16px; font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.2s; }
+.co-btn-primary-large:hover:not(:disabled) { background: #333; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+.co-btn-primary-large:disabled { background: var(--border); cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .co-options-grid { grid-template-columns: 1fr; }
+  .co-time-grid { grid-template-columns: 1fr 1fr; }
+  .co-card { padding: 24px; }
+  .co-step-title { font-size: 26px; }
+  .co-review-summary { grid-template-columns: 1fr; gap: 16px; }
+}

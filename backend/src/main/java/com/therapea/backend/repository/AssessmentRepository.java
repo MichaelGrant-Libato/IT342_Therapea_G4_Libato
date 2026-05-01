@@ -8,6 +8,6 @@ import java.util.List;
 
 @Repository
 public interface AssessmentRepository extends JpaRepository<Assessment, Long> {
-    // Custom query to fetch a user's assessments, newest first
     List<Assessment> findByEmailOrderByCreatedAtDesc(String email);
+    List<Assessment> findByProviderEmailOrderByCreatedAtDesc(String providerEmail);
 }

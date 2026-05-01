@@ -15,13 +15,19 @@ public class AssessmentService {
     private AssessmentRepository assessmentRepository;
 
     public Assessment createAssessment(AssessmentRequest request) {
-        Assessment assessment = Assessment.builder()
-                .email(request.getEmail())
-                .assessmentType(request.getAssessmentType())
-                .clinicalScore(request.getClinicalScore())
-                .riskLevel(request.getRiskLevel())
-                .status(request.getStatus())
-                .build();
+        // Using standard object instantiation instead of .builder() to fix the compilation error
+        Assessment assessment = new Assessment();
+
+        assessment.setEmail(request.getEmail());
+        assessment.setUserId(request.getUserId());
+        assessment.setAssessmentType(request.getAssessmentType());
+        assessment.setPhq9Score(request.getPhq9Score());
+        assessment.setGad7Score(request.getGad7Score());
+        assessment.setTotalScore(request.getTotalScore());
+        assessment.setClinicalScore(request.getClinicalScore());
+        assessment.setRiskLevel(request.getRiskLevel());
+        assessment.setStatus(request.getStatus());
+        assessment.setAnswers(request.getAnswers());
 
         return assessmentRepository.save(assessment);
     }
