@@ -160,3 +160,23 @@
   .co-step-title { font-size: 26px; }
   .co-review-summary { grid-template-columns: 1fr; gap: 16px; }
 }
+
+@media print {
+  body * {
+    visibility: hidden; 
+  }
+  .printable-receipt, .printable-receipt * {
+    visibility: visible;
+  }
+  .printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .no-print {
+    display: none !important; 
+  }
+}

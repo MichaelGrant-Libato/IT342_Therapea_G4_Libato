@@ -24,26 +24,57 @@ const Checkout: React.FC = () => {
   const [tempDate, setTempDate] = useState('');
   const [dateError, setDateError] = useState<string | null>(null);
   
-  // FIXED: Renamed to match the variable used in the JSX below
   const allAvailableTimes = ["9:00 AM", "10:30 AM", "1:00 PM", "2:30 PM", "4:00 PM"];
 
   // ─── Step 3: Review & Payment State ───
-  const [sessionFormat, setSessionFormat] = useState<'online' | 'walk-in'>('online');
-  const [paymentMethod, setPaymentMethod] = useState<'online-full' | 'online-partial' | 'walk-in'>('online-full');
+  const [sessionFormat, setSessionFormat] = useState<'online' | 'face-to-face'>('online');
+  const [paymentMethod, setPaymentMethod] = useState<'online-full' | 'online-partial'>('online-full');
+  
+  // ─── Modal & Confirmation State ───
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [confirmationNumber, setConfirmationNumber] = useState('');
+  const [receiptData, setReceiptData] = useState<any>(null); // Holds data when returning from PayMongo
 
   // ─── Dynamic Booking States ───
   const [providerBookedSlots, setProviderBookedSlots] = useState<{date: string, time: string}[]>([]);
   const [patientBookings, setPatientBookings] = useState<{date: string, time: string}[]>([]);
 
+  // 🔴 MAGIC RETURN HOOK: Detects when the user returns from PayMongo
   useEffect(() => {
-    if (!therapist) navigate('/therapists', { replace: true });
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('status') === 'success') {
+      const pendingStr = sessionStorage.getItem('pendingTherapyBooking');
+      if (pendingStr) {
+        setIsProcessing(true);
+        const pendingBooking = JSON.parse(pendingStr);
+        
+        // 1. NOW we save it to the database because payment is guaranteed!
+        fetch('http://localhost:8083/api/appointments/book', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pendingBooking.dbPayload)
+        }).then(res => {
+          if (res.ok) {
+            const newConfNumber = `APT - ${new Date().getFullYear()} - ${Math.floor(100000 + Math.random() * 900000)}`;
+            setConfirmationNumber(newConfNumber);
+            setReceiptData(pendingBooking.receiptData);
+            sessionStorage.removeItem('pendingTherapyBooking'); // Clear it out
+            setStep(4); // Jump straight to the receipt screen
+          }
+        }).catch(err => console.error("Error saving booking:", err))
+          .finally(() => setIsProcessing(false));
+      }
+      return; 
+    }
+
+    // Normal page load check
+    if (!therapist && !urlParams.get('status')) navigate('/therapists', { replace: true });
   }, [therapist, navigate]);
 
-  // Fetch Therapist's Existing Appointments to block out times
+  // Fetch Schedules (Skipped if we are just showing the receipt)
   useEffect(() => {
-    if (!therapist) return;
+    if (!therapist || step === 4) return;
     const fetchProviderSchedule = async () => {
       try {
         const res = await fetch(`http://localhost:8083/api/appointments/provider/${encodeURIComponent(therapist.name)}`);
@@ -54,15 +85,13 @@ const Checkout: React.FC = () => {
             setProviderBookedSlots(activeApts.map((a: any) => ({ date: a.date, time: a.time })));
           }
         }
-      } catch (err) {
-        console.error("Failed to fetch provider schedule:", err);
-      }
+      } catch (err) { console.error(err); }
     };
     fetchProviderSchedule();
-  }, [therapist]);
+  }, [therapist, step]);
 
-  // Fetch Patient's Existing Appointments to enforce the 1-per-day rule
   useEffect(() => {
+    if (step === 4) return;
     const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
     if (storedUser) {
       const user = JSON.parse(storedUser);
@@ -76,18 +105,18 @@ const Checkout: React.FC = () => {
               setPatientBookings(activeApts.map((a: any) => ({ date: a.date, time: a.time })));
             }
           }
-        } catch (err) {
-          console.error("Failed to fetch patient schedule:", err);
-        }
+        } catch (err) { console.error(err); }
       };
       fetchPatientSchedule();
     }
-  }, []);
+  }, [step]);
 
-  if (!therapist) return null;
+  // If therapist is missing and we aren't loading a receipt, render nothing while redirecting
+  if (!therapist && !receiptData) return null;
 
-  const baseRate = therapist.rate || 1500;
+  const baseRate = therapist?.rate || 1500;
   const payToday = paymentMethod === 'online-full' ? baseRate : (paymentMethod === 'online-partial' ? Math.round(baseRate * 0.5) : 0);
+  const remainingBalance = baseRate - payToday;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -116,78 +145,116 @@ const Checkout: React.FC = () => {
     }
   };
 
- const handleFinalConfirm = async () => {
+  const handleProceedFromReview = () => {
+    setShowConfirmModal(true); 
+  };
+
+  const executeCheckout = async () => {
     setIsProcessing(true);
     const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
     const user = JSON.parse(stored || '{}');
     const formattedDate = selectedDate?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
     try {
-      const res = await fetch('http://localhost:8083/api/appointments/book', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // 1. Pack the data to be saved to the database LATER
+      const pendingData = {
+        dbPayload: {
           email: user.email,
           providerName: therapist.name,
-          
-          // 🔴 ADD THIS EXACT LINE:
           providerEmail: therapist.email, 
-          
           date: formattedDate,
           time: selectedTime,
           type: sessionFormat === 'online' ? 'Telehealth' : 'In-Person',
           assessmentType,
           notes,
-          amountPaid: payToday
+          amountPaid: payToday,
+          status: 'Scheduled' // Automatically scheduled because it will only save if payment succeeds
+        },
+        receiptData: {
+          therapistName: therapist.name,
+          date: formattedDate,
+          time: selectedTime,
+          type: sessionFormat === 'online' ? 'Video Consultation' : 'Face-to-Face Clinic',
+          amountPaid: payToday,
+          balance: remainingBalance
+        }
+      };
+
+      // 2. Hide it in SessionStorage
+      sessionStorage.setItem('pendingTherapyBooking', JSON.stringify(pendingData));
+
+      // 3. Ask Spring Boot for the PayMongo Link
+      const payRes = await fetch('http://localhost:8083/api/payments/create-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: payToday,
+          description: `Therapy Session: ${therapist.name}`,
+          email: user.email
         })
       });
 
-      if (res.ok) {
-        setShowSuccess(true);
-        setTimeout(() => navigate('/dashboard'), 2500);
+      const payData = await payRes.json();
+      
+      if (payData.success && payData.checkoutUrl) {
+        // REDIRECT TO PAYMONGO
+        window.location.href = payData.checkoutUrl;
+      } else {
+        console.error("PayMongo Error:", payData.message);
+        setIsProcessing(false);
       }
     } catch (err) {
-      console.error("Booking error:", err);
-    } finally {
+      console.error("Checkout error:", err);
       setIsProcessing(false);
-    }
+    } 
   };
 
-  // ─── Conflict Checks ───
   const formattedSelectedDate = selectedDate?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-  
-  // 1. Check if patient already has an appointment on this date (Limit 1 per day)
   const patientHasBookingOnDate = patientBookings.some(b => b.date === formattedSelectedDate);
-  
-  // 2. Check which times the provider is already booked
   const providerBookedTimesForDate = providerBookedSlots
     .filter(slot => slot.date === formattedSelectedDate)
     .map(slot => slot.time);
 
+  // If processing the return from PayMongo, show a loading screen
+  if (isProcessing && step !== 4 && !showConfirmModal) {
+    return (
+      <SidebarLayout title="Confirming Payment...">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+          <h2>Verifying your secure payment...</h2>
+        </div>
+      </SidebarLayout>
+    );
+  }
+
   return (
     <SidebarLayout title="Book Appointment">
       <div className="co-container">
-        <div className={`co-layout ${showSuccess ? 'blurred' : ''}`}>
+        <div className={`co-layout ${showConfirmModal ? 'blurred' : ''}`}>
           
-          <div className="co-header-wizard">
-            <button className="co-btn-back-minimal" onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
-              <span>{step === 1 ? 'Exit' : 'Back'}</span>
-            </button>
-            <div className="co-steps-stepper">
-              <div className={`step-item ${step >= 1 ? 'active' : ''} ${step > 1 ? 'done' : ''}`}>1</div>
-              <div className="step-line" />
-              <div className={`step-item ${step >= 2 ? 'active' : ''} ${step > 2 ? 'done' : ''}`}>2</div>
-              <div className="step-line" />
-              <div className={`step-item ${step >= 3 ? 'active' : ''}`}>3</div>
+          {step < 4 && (
+            <div className="co-header-wizard">
+              <button className="co-btn-back-minimal" onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+                <span>{step === 1 ? 'Exit' : 'Back'}</span>
+              </button>
+              <div className="co-steps-stepper" style={{ justifyContent: 'center', width: '100%', gap: '10px' }}>
+                <div className={`step-item ${step >= 1 ? 'active' : ''} ${step > 1 ? 'done' : ''}`}>1</div>
+                <div className="step-line" />
+                <div className={`step-item ${step >= 2 ? 'active' : ''} ${step > 2 ? 'done' : ''}`}>2</div>
+                <div className="step-line" />
+                <div className={`step-item ${step >= 3 ? 'active' : ''}`}>3</div>
+              </div>
             </div>
-          </div>
+          )}
 
-          <h1 className="co-step-title">
-            {step === 1 ? 'Initial Intake' : step === 2 ? 'Choose Schedule' : 'Review & Confirm'}
-          </h1>
+          {step < 4 && (
+            <h1 className="co-step-title" style={{ textAlign: 'center' }}>
+              {step === 1 ? 'Initial Intake' : step === 2 ? 'Choose Schedule' : 'Review & Confirm'}
+            </h1>
+          )}
 
-          {step === 1 && (
+          {/* STEP 1: INTAKE */}
+          {step === 1 && therapist && (
             <div className="co-card animate-in">
               <div className="co-card-header">
                 <h2>What brings you here?</h2>
@@ -209,7 +276,8 @@ const Checkout: React.FC = () => {
             </div>
           )}
 
-          {step === 2 && (
+          {/* STEP 2: SCHEDULING */}
+          {step === 2 && therapist && (
             <div className="co-card animate-in">
               <div className="co-calendar-wizard-container">
                 <div className="co-calendar-wrap">
@@ -247,7 +315,6 @@ const Checkout: React.FC = () => {
                           className={`co-cal-day ${isPast ? 'disabled' : ''} ${isSelected ? 'selected' : ''} ${(isFullyBooked || patientHasApptThisDay) && !isPast ? 'fully-booked' : ''}`} 
                           onClick={() => !isPast && !isFullyBooked && !patientHasApptThisDay && (setSelectedDate(date), setSelectedTime(null))}
                           disabled={isPast || isFullyBooked || patientHasApptThisDay}
-                          title={patientHasApptThisDay ? "You already have a session this day" : isFullyBooked ? "Fully Booked" : ""}
                         >
                           {d}
                         </button>
@@ -256,16 +323,14 @@ const Checkout: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Patient Rule Validation Message */}
                 {selectedDate && patientHasBookingOnDate && (
                   <div className="co-alert-box warning">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    You already have a session scheduled on this date. To ensure adequate processing time, patients are limited to one session per day. Please select a different date.
+                    You already have a session scheduled on this date.
                   </div>
                 )}
 
                 <div className={`co-time-picker ${selectedDate && !patientHasBookingOnDate ? 'visible' : ''}`}>
-                   <h3>Available Slots for {selectedDate?.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</h3>
+                   <h3>Available Slots</h3>
                    <div className="co-time-grid">
                      {allAvailableTimes.map(t => {
                        const isBookedByProvider = providerBookedTimesForDate.includes(t);
@@ -289,7 +354,8 @@ const Checkout: React.FC = () => {
             </div>
           )}
 
-          {step === 3 && (
+          {/* STEP 3: REVIEW DETAILS */}
+          {step === 3 && therapist && (
             <div className="co-card animate-in">
               <div className="co-review-summary">
                 <div className="summary-item"><label>Provider</label><p>{therapist.name}</p></div>
@@ -301,49 +367,144 @@ const Checkout: React.FC = () => {
                 <label>Session Format</label>
                 <div className="co-format-toggle">
                   <div className={`format-option ${sessionFormat === 'online' ? 'active' : ''}`} onClick={() => setSessionFormat('online')}>Online</div>
-                  <div className={`format-option ${sessionFormat === 'walk-in' ? 'active' : ''}`} onClick={() => {setSessionFormat('walk-in'); setPaymentMethod('walk-in');}}>Walk-In (Clinic)</div>
+                  <div className={`format-option ${sessionFormat === 'face-to-face' ? 'active' : ''}`} onClick={() => setSessionFormat('face-to-face')}>Face-to-Face (Clinic)</div>
                 </div>
               </div>
 
               <div className="co-input-group" style={{ marginTop: '32px' }}>
-                <label>Payment Method</label>
+                <label>Secure Payment Method</label>
                 <div className="co-payment-selections">
-                  {sessionFormat === 'walk-in' && (
-                    <label className={`co-payment-radio ${paymentMethod === 'walk-in' ? 'active' : ''}`}>
-                      <input type="radio" checked={paymentMethod === 'walk-in'} onChange={() => setPaymentMethod('walk-in')} />
-                      <div className="co-payment-label-text"><span className="co-payment-name">Pay at Clinic</span><span className="co-payment-hint">Pay via cash or card when you arrive</span></div>
-                    </label>
-                  )}
                   <label className={`co-payment-radio ${paymentMethod === 'online-full' ? 'active' : ''}`}>
                     <input type="radio" checked={paymentMethod === 'online-full'} onChange={() => setPaymentMethod('online-full')} />
-                    <div className="co-payment-label-text"><span className="co-payment-name">Pay in Full (Online)</span><span className="co-payment-hint">Securely pay the full amount now</span></div>
+                    <div className="co-payment-label-text">
+                      <span className="co-payment-name">Pay in Full (PayMongo)</span>
+                      <span className="co-payment-hint">Securely pay the full amount now via GCash, Maya, or Card</span>
+                    </div>
                   </label>
                   <label className={`co-payment-radio ${paymentMethod === 'online-partial' ? 'active' : ''}`}>
                     <input type="radio" checked={paymentMethod === 'online-partial'} onChange={() => setPaymentMethod('online-partial')} />
-                    <div className="co-payment-label-text"><span className="co-payment-name">Pay Downpayment (Online)</span><span className="co-payment-hint">Pay 50% now to reserve, pay the rest later</span></div>
+                    <div className="co-payment-label-text">
+                      <span className="co-payment-name">50% Downpayment (PayMongo)</span>
+                      <span className="co-payment-hint">Secure your slot now, pay the remaining balance later</span>
+                    </div>
                   </label>
                 </div>
               </div>
 
-              <div className="co-price-card">
+              {/* 🔴 Anti-Scam Policy Display */}
+              {paymentMethod === 'online-partial' && (
+                <div className="co-alert-box info" style={{ marginTop: '16px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af' }}>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <div>
+                      <strong>Payment Policy:</strong><br/>
+                      {sessionFormat === 'online' 
+                        ? 'To protect our providers, the meeting link for your online session will remain locked. The remaining balance must be settled through your dashboard prior to the session.' 
+                        : 'The remaining balance must be settled at the clinic reception before your face-to-face session begins.'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="co-price-card" style={{ marginTop: '24px' }}>
                 <div className="price-row"><span>Counseling Fee</span><span>₱{baseRate.toLocaleString()}</span></div>
                 {paymentMethod === 'online-partial' && <div className="price-row" style={{ color: 'var(--primary)', fontWeight: 600 }}><span>To be paid later</span><span>- ₱{(baseRate - payToday).toLocaleString()}</span></div>}
                 <div className="price-row total"><span>Due Today</span><span>₱{payToday.toLocaleString()}</span></div>
               </div>
 
-              <button className="co-btn-primary-large" onClick={handleFinalConfirm} disabled={isProcessing}>{isProcessing ? 'Confirming...' : 'Book Appointment'}</button>
+              <button className="co-btn-primary-large" onClick={handleProceedFromReview}>
+                Proceed to Checkout
+              </button>
+            </div>
+          )}
+
+          {/* STEP 4: SUCCESS RECEIPT */}
+          {step === 4 && receiptData && (
+            <div className="co-card animate-in printable-receipt" style={{ padding: '40px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                <h2 style={{ fontSize: '24px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                  Appointment Confirmed <span style={{ color: '#0A5C36' }}>✓</span>
+                </h2>
+                <p style={{ color: '#666', fontSize: '14px', margin: 0 }}>Your therapy session has been officially booked</p>
+              </div>
+
+              <div style={{ backgroundColor: '#f5f5f5', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+                <div style={{ borderBottom: '1px solid #e0e0e0', paddingBottom: '16px', marginBottom: '16px' }}>
+                  <p style={{ fontSize: '12px', color: '#666', margin: '0 0 4px 0' }}>Therapist</p>
+                  <p style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>{receiptData.therapistName}</p>
+                </div>
+                <div style={{ borderBottom: '1px solid #e0e0e0', paddingBottom: '16px', marginBottom: '16px' }}>
+                  <p style={{ fontSize: '12px', color: '#666', margin: '0 0 4px 0' }}>Date & Time</p>
+                  <p style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>
+                    {receiptData.date} at {receiptData.time}
+                  </p>
+                </div>
+                <div style={{ borderBottom: '1px solid #e0e0e0', paddingBottom: '16px', marginBottom: '16px' }}>
+                  <p style={{ fontSize: '12px', color: '#666', margin: '0 0 4px 0' }}>Session Type</p>
+                  <p style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>{receiptData.type}</p>
+                </div>
+                <div>
+                  <p style={{ fontSize: '12px', color: '#666', margin: '0 0 4px 0' }}>Amount Paid (via PayMongo)</p>
+                  <p style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#0A5C36' }}>₱{receiptData.amountPaid.toLocaleString()}</p>
+                </div>
+                {receiptData.balance > 0 && (
+                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
+                    <p style={{ fontSize: '12px', color: '#b91c1c', margin: '0 0 4px 0', fontWeight: 600 }}>Remaining Balance Due</p>
+                    <p style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#b91c1c' }}>₱{receiptData.balance.toLocaleString()}</p>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ backgroundColor: '#f5f5f5', borderRadius: '12px', padding: '24px', textAlign: 'center', marginBottom: '32px' }}>
+                <p style={{ fontSize: '14px', color: '#666', margin: '0 0 8px 0' }}>Confirmation Number</p>
+                <h3 style={{ fontSize: '24px', fontWeight: 700, margin: 0 }}>{confirmationNumber}</h3>
+              </div>
+
+              <div className="no-print" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button 
+                  style={{ width: '100%', padding: '16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}
+                  onClick={() => window.print()}
+                >
+                  Download Confirmation
+                </button>
+                <button 
+                  style={{ width: '100%', padding: '16px', backgroundColor: '#f1f1f1', color: '#333', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}
+                  onClick={() => navigate('/dashboard')}
+                >
+                  Return to Dashboard
+                </button>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {showSuccess && (
-        <div className="co-modal-overlay">
-          <div className="co-modal-card success-card scale-in">
-            <div className="success-check-circle">✓</div>
-            <h2>Booking Confirmed</h2>
-            <p>Your session has been successfully scheduled.</p>
-            <p className="redirect-text">Redirecting to your dashboard...</p>
+      {/* CONFIRMATION MODAL POPUP */}
+      {showConfirmModal && therapist && (
+        <div className="co-modal-overlay" style={{ zIndex: 1000 }} onClick={() => !isProcessing && setShowConfirmModal(false)}>
+          <div className="co-modal-card scale-in" onClick={e => e.stopPropagation()} style={{ padding: '32px', maxWidth: '400px', textAlign: 'center' }}>
+            <h2 style={{ fontSize: '22px', marginBottom: '16px', color: '#1e293b' }}>Confirm & Pay</h2>
+            <p style={{ color: '#64748b', fontSize: '15px', marginBottom: '24px', lineHeight: '1.6' }}>
+              You are securing a session with <strong>{therapist.name}</strong> on <strong>{selectedDate?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} at {selectedTime}</strong>.
+              <br/><br/>
+              You will be safely redirected to PayMongo to complete your payment of ₱{payToday.toLocaleString()}.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                style={{ flex: 1, padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }} 
+                onClick={() => setShowConfirmModal(false)}
+                disabled={isProcessing}
+              >
+                Cancel
+              </button>
+              <button 
+                style={{ flex: 1, padding: '14px', borderRadius: '8px', border: 'none', backgroundColor: '#0A5C36', color: 'white', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}
+                onClick={executeCheckout}
+                disabled={isProcessing}
+              >
+                {isProcessing ? 'Redirecting...' : 'Yes, Proceed'}
+              </button>
+            </div>
           </div>
         </div>
       )}
