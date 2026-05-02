@@ -31,7 +31,8 @@ public class SecurityConfig {
                                 "/api/appointments/**",
                                 "/api/patients/**",
                                 "/api/messages/**",
-                                "/api/users/**"
+                                "/api/users/**",
+                                "/api/payments/**" // 🔴 ADDED: Whitelisted the new payment endpoint!
                         ).permitAll()
                         .anyRequest().authenticated()
                 );
@@ -49,7 +50,6 @@ public class SecurityConfig {
                 "http://10.0.2.2"
         ));
 
-        // <-- ADDED "PATCH" HERE for the Doctor's "Mark Reviewed" button
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
         config.setAllowCredentials(true);
