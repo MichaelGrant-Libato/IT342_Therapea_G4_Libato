@@ -82,8 +82,8 @@ export default function LandingPage() {
           ))}
         </div>
 
-        {/* CTA buttons */}
         <div className="nav-actions">
+          <a href="/reference" className="nav-link" style={{ marginRight: '10px' }}>Track Application</a>
           <a href="/login" className="btn btn-secondary">Login</a>
           <a href="/register" className="btn btn-primary">Sign Up</a>
         </div>
