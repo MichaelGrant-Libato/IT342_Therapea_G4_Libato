@@ -25,8 +25,8 @@ public class DashboardService {
         response.email = user.getEmail();
         response.fullName = user.getFullName();
         response.role = user.getRole();
-        response.emailVerified = user.isEmailVerified();
-        response.profileCompleted = user.isProfileCompleted();
+        response.emailVerified = user.getEmailVerified();
+        response.profileCompleted = user.getProfileCompleted();
         response.createdAt = user.getCreatedAt() != null ? user.getCreatedAt().toString() : null;
         response.lastLogin = user.getLastLogin() != null ? user.getLastLogin().toString() : null;
         response.profilePictureUrl = user.getProfilePictureUrl();

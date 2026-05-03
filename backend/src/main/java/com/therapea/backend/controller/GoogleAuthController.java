@@ -207,7 +207,7 @@ public class GoogleAuthController {
                 user.setFullName(fullName != null && !fullName.isBlank() ? fullName : email);
                 user.setPassword(UUID.randomUUID().toString());
                 user.setEmailVerified(true);
-                user.setActive(true);
+                user.setIsActive(true);
                 user.setVerifiedAt(LocalDateTime.now());
                 user.setCreatedAt(LocalDateTime.now());
                 user.setSessionHours(24);
@@ -303,6 +303,22 @@ public class GoogleAuthController {
                 return ResponseEntity.status(404).body(Map.of(
                         "success", false, "error", "User not found. Please register first."
                 ));
+
+            // ✅ THE BOUNCER CHECK: Is this a pending/rejected doctor trying to sneak in via Google?
+            if ("DOCTOR".equals(user.getRole())) {
+                if ("PENDING".equals(user.getStatus())) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                            "success", false, "error", "Your application is still under review. Please wait for an approval email."));
+                }
+                if ("REJECTED".equals(user.getStatus())) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                            "success", false, "error", "Your application was declined. Reason: " + user.getRejectionReason()));
+                }
+                if (user.getIsActive() != null && !user.getIsActive()) {
+                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
+                            "success", false, "error", "Your account is currently deactivated. Please contact support."));
+                }
+            }
 
             user.setLastLogin(LocalDateTime.now());
             userService.saveUser(user);
