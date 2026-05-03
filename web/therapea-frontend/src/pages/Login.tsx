@@ -4,6 +4,8 @@ import "../styles/Login.css";
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8083';
+
   const [formData, setFormData]     = useState({ email: '', password: '' });
   const [error, setError]           = useState('');
   const [success, setSuccess]       = useState('');
@@ -13,16 +15,36 @@ const Login: React.FC = () => {
   const [showOtpFlow, setShowOtpFlow] = useState(false);
   const [otpCode, setOtpCode]         = useState('');
 
-  // ✅ If already logged in, go to dashboard
-  useEffect(() => {
-    const session = localStorage.getItem('user') || sessionStorage.getItem('user');
-    if (session) {
+  // ==========================================
+  // SMART ERROR PARSER
+  // ==========================================
+  const parseError = async (res: Response) => {
+    try {
+      const data = await res.json();
+      return data.error || data.message || "Something went wrong. Please try again.";
+    } catch {
+      return "We are having trouble connecting. Please check your internet and try again.";
+    }
+  };
+
+  // ✅ Helper to route users based on role
+  const handleRoleBasedNavigation = (role: string) => {
+    if (role === 'ADMIN') {
+      navigate('/admin', { replace: true });
+    } else {
       navigate('/dashboard', { replace: true });
+    }
+  };
+
+  useEffect(() => {
+    const rawUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (rawUser) {
+      const user = JSON.parse(rawUser);
+      handleRoleBasedNavigation(user.role);
       return;
     }
   }, [navigate]);
 
-  // ✅ Block back navigation — stay on login, don't let browser go to Google OAuth page
   useEffect(() => {
     window.history.pushState(null, '', window.location.href);
     const handlePopState = () => {
@@ -32,7 +54,6 @@ const Login: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // ✅ Handle Google OAuth redirect params
   useEffect(() => {
     const params  = new URLSearchParams(window.location.search);
     const gEmail  = params.get('googleEmail');
@@ -53,20 +74,19 @@ const Login: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      const res  = await fetch('http://localhost:8083/api/auth/send-otp', {
+      const res  = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, type: 'LOGIN' }),
       });
-      const data = await res.json();
-      if (data.success) {
+      if (res.ok) {
         setShowOtpFlow(true);
-        setSuccess(`OTP sent!${data.otp ? ' (Dev — OTP: ' + data.otp + ')' : ''}`);
+        setSuccess(`Verification code sent to ${email}`);
       } else {
-        setError('Failed to send OTP. Please try again.');
+        setError(await parseError(res));
       }
     } catch {
-      setError('Failed to connect to server.');
+      setError('We are having trouble connecting. Please check your internet and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -77,45 +97,45 @@ const Login: React.FC = () => {
     setIsLoading(true);
     setError('');
     try {
-      const verifyRes  = await fetch('http://localhost:8083/api/auth/verify-otp', {
+      // 1. Verify the OTP First
+      const verifyRes  = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: googleEmail, otp: otpCode }),
       });
-      const verifyData = await verifyRes.json();
 
-      if (!verifyData.success) {
-        setError('Invalid or expired OTP. Please try again.');
+      if (!verifyRes.ok) {
+        setError(await parseError(verifyRes));
+        setIsLoading(false);
         return;
       }
 
-      const loginRes  = await fetch('http://localhost:8083/api/auth/google-login', {
+      // ✅ 2. THE FIX: Route through the official google-login endpoint to hit the Bouncer Check!
+      const userRes = await fetch(`${API_BASE_URL}/api/auth/google-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: googleEmail }),
+        body: JSON.stringify({ email: googleEmail })
       });
-      const loginData = await loginRes.json();
+      
+      if (userRes.ok) {
+        const sessionData = await userRes.json(); 
 
-      if (loginData.success) {
-        const userData = {
-          userId:   loginData.userId,
-          email:    loginData.email,
-          fullName: loginData.fullName,
-          role:     loginData.role,
-        };
         if (rememberMe) {
-          localStorage.setItem('user', JSON.stringify(userData));
+          localStorage.setItem('user', JSON.stringify(sessionData));
         } else {
-          sessionStorage.setItem('user', JSON.stringify(userData));
+          sessionStorage.setItem('user', JSON.stringify(sessionData));
           sessionStorage.setItem('sessionStart', Date.now().toString());
         }
+
         setSuccess('Login successful! Redirecting...');
-        setTimeout(() => navigate('/dashboard', { replace: true }), 1500);
+        setTimeout(() => handleRoleBasedNavigation(sessionData.role), 1500);
       } else {
-        setError(loginData.error || 'Login failed. Please try again.');
+        // ✅ If the user is a PENDING or REJECTED doctor, the backend will throw an error here,
+        // and the frontend will display it perfectly without logging them in!
+        setError(await parseError(userRes));
       }
     } catch {
-      setError('Failed to connect to server.');
+      setError('We are having trouble connecting. Please check your internet and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -125,11 +145,12 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError(''); setSuccess(''); setIsLoading(true);
     try {
-      const res = await fetch('http://localhost:8083/api/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
+      
       if (res.ok) {
         const data = await res.json();
         if (rememberMe) {
@@ -139,79 +160,76 @@ const Login: React.FC = () => {
           sessionStorage.setItem('sessionStart', Date.now().toString());
         }
         setSuccess('Login successful! Redirecting...');
-        setTimeout(() => navigate('/dashboard', { replace: true }), 1500);
+        setTimeout(() => handleRoleBasedNavigation(data.role), 1500);
       } else {
-        const text = await res.text();
-        setError(text || 'Login failed. Please check your credentials.');
+        setError(await parseError(res));
       }
     } catch {
-      setError('Failed to connect to server.');
+      setError('We are having trouble connecting. Please check your internet and try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async () => {
     setIsLoading(true); setError('');
     try {
-      const res  = await fetch('http://localhost:8083/api/auth/google-register-url');
-      const data = await res.json();
-      if (!data.success) { setError('Failed to initiate Google sign-in.'); return; }
+      const res  = await fetch(`${API_BASE_URL}/api/auth/google-register-url`);
+      if (res.ok) {
+        const data = await res.json();
+        sessionStorage.setItem('oauth_state', data.state);
 
-      sessionStorage.setItem('oauth_state', data.state);
+        const popup = window.open(
+          data.url,
+          'google-oauth',
+          'width=500,height=600,scrollbars=yes,resizable=yes'
+        );
 
-      // ✅ Open in popup — Google pages never touch main window history
-      const popup = window.open(
-        data.url,
-        'google-oauth',
-        'width=500,height=600,scrollbars=yes,resizable=yes'
-      );
-
-      if (!popup) {
-        setError('Popup blocked. Please allow popups for this site.');
-        setIsLoading(false);
-        return;
-      }
-
-      // ✅ Listen for result from popup
-      const handleMessage = async (event: MessageEvent) => {
-        if (event.origin !== 'http://localhost:8083') return;
-        window.removeEventListener('message', handleMessage);
-        setIsLoading(false);
-
-        const { type, email } = event.data;
-
-        if (type === 'error') {
-          setError('Google sign-in failed. Please try again.');
+        if (!popup) {
+          setError('Your browser blocked the popup. Please allow popups for this site.');
+          setIsLoading(false);
           return;
         }
 
-        if (type === 'existing') {
-          // Existing user — trigger OTP flow
-          setGoogleEmail(email);
-          sendOtp(email);
-          return;
-        }
-
-        if (type === 'new') {
-          // New user — redirect to register for profile completion
-          navigate(`/register?email=${encodeURIComponent(email)}&name=${encodeURIComponent(event.data.name || '')}`);
-        }
-      };
-
-      window.addEventListener('message', handleMessage);
-
-      // Cleanup if popup closed manually
-      const pollClosed = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(pollClosed);
+        const handleMessage = async (event: MessageEvent) => {
+          if (event.origin !== API_BASE_URL) return;
           window.removeEventListener('message', handleMessage);
           setIsLoading(false);
-        }
-      }, 500);
 
+          const { type, email } = event.data;
+
+          if (type === 'error') {
+            setError('Google sign-in failed. Please try again.');
+            return;
+          }
+
+          if (type === 'existing') {
+            setGoogleEmail(email);
+            sendOtp(email);
+            return;
+          }
+
+          if (type === 'new') {
+            navigate(`/register?email=${encodeURIComponent(email)}&name=${encodeURIComponent(event.data.name || '')}`);
+          }
+        };
+
+        window.addEventListener('message', handleMessage);
+
+        const pollClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(pollClosed);
+            window.removeEventListener('message', handleMessage);
+            setIsLoading(false);
+          }
+        }, 500);
+
+      } else {
+        setError(await parseError(res));
+        setIsLoading(false);
+      }
     } catch {
-      setError('Failed to connect to server.');
+      setError('Failed to connect to Google. Please check your internet connection.');
       setIsLoading(false);
     }
   };
@@ -222,7 +240,6 @@ const handleGoogleLogin = async () => {
     </svg>
   );
 
-  // ── OTP Verification Screen ──
   if (showOtpFlow) {
     return (
       <div className="login-container">
@@ -264,8 +281,9 @@ const handleGoogleLogin = async () => {
               <div className="form-group">
                 <label htmlFor="otp" className="form-label">One-Time Password (OTP)</label>
                 <input type="text" id="otp" value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
                   placeholder="Enter 6-digit code" className="form-input"
+                  style={{ textAlign: 'center', fontSize: '20px', letterSpacing: '8px', fontWeight: 600 }}
                   maxLength={6} required />
               </div>
               <div className="form-group">
@@ -275,7 +293,7 @@ const handleGoogleLogin = async () => {
                   &nbsp;Remember me
                 </label>
               </div>
-              <button type="submit" className="login-button" disabled={isLoading}>
+              <button type="submit" className="login-button" disabled={isLoading || otpCode.length < 6}>
                 {isLoading ? 'Verifying…' : 'Verify & Sign In'}
               </button>
             </form>
@@ -288,8 +306,7 @@ const handleGoogleLogin = async () => {
             </div>
             <p className="signup-link" style={{ marginTop: '16px' }}>
               <button type="button" onClick={() => setShowOtpFlow(false)}
-                style={{ background: 'none', border: 'none', color: 'inherit',
-                  cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px' }}>
                 ← Back to Login
               </button>
             </p>
@@ -299,7 +316,6 @@ const handleGoogleLogin = async () => {
     );
   }
 
-  // ── Main Login Screen ──
   return (
     <div className="login-container">
       <div className="login-left">
@@ -382,7 +398,7 @@ const handleGoogleLogin = async () => {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            {isLoading ? 'Redirecting to Google...' : 'Sign in with Google'}
+            {isLoading ? 'Connecting...' : 'Sign in with Google'}
           </button>
 
           <p className="signup-link">

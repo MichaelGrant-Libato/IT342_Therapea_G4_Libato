@@ -17,47 +17,31 @@ import Patients from './pages/Patients';
 import Messages from './pages/Messages'; 
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
+import Reference from './pages/Reference';
+import AdminApprovals from './pages/AdminApprovals';
 
 // ── NEW IMPORTS ──
 import AssessmentResult from './pages/AssessmentResult';
 import AssessmentHistory from './pages/AssessmentHistory';
 
-// Placeholder pages for nav items not yet built
-const ComingSoon = ({ page }: { page: string }) => (
-  <div style={{
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontFamily: 'DM Sans, sans-serif',
-    background: 'var(--bg)',
-    gap: 12,
-  }}>
-    <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-      Coming soon
-    </p>
-    <h1 style={{ fontFamily: 'Lora, serif', fontSize: 32, fontWeight: 700, color: 'var(--text-main)', margin: 0, letterSpacing: '-0.02em' }}>{page}</h1>
-    <p style={{ fontSize: 15, color: 'var(--text-sub)', margin: 0 }}>This page is still being built.</p>
-    <a
-      href="/dashboard"
-      style={{
-        marginTop: 16,
-        padding: '12px 28px',
-        background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%)',
-        color: '#fff',
-        borderRadius: 9999,
-        textDecoration: 'none',
-        fontWeight: 600,
-        fontSize: 14.5,
-        boxShadow: '0 2px 8px rgba(82, 112, 80, 0.25)',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-      }}
-    >
-      ← Back to Dashboard
-    </a>
-  </div>
-);
+// ── ROLE-BASED PROTECTED ROUTE COMPONENT ──
+const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
+  const rawUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+  
+  if (!rawUser) {
+    // If not logged in, go to login
+    return <Navigate to="/login" replace />;
+  }
+
+  const user = JSON.parse(rawUser);
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // If logged in but wrong role (e.g. Patient trying to see Admin), go to landing
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+};
 
 function App() {
   return (
@@ -68,26 +52,40 @@ function App() {
         <Route path="/login"     element={<Login />} />
         <Route path="/register"  element={<Register />} />
         <Route path="/emergency" element={<EmergencyMap />} />
+        <Route path="/reference" element={<Reference />} />
 
-        {/* ── Core Navigation (Sidebar Pages) ── */}
-        <Route path="/dashboard"    element={<Dashboard />} />
-        <Route path="/profile"      element={<Profile />} />
-        <Route path="/appointments" element={<Appointments />} />
-        <Route path="/patients"     element={<Patients />} />
-        <Route path="/messages"     element={<Messages />} />
-        <Route path="/progress"     element={<Progress />} />
+        {/* ── Protected: All Roles ── */}
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/profile"   element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/settings"  element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/messages"  element={<ProtectedRoute><Messages /></ProtectedRoute>} />
 
-        {/* ── Therapist / Booking flow ── */}
-        <Route path="/therapists"     element={<FindTherapist />} />
-        <Route path="/therapists/:id" element={<TherapistProfile />} />
-        <Route path="/checkout"       element={<Checkout />} />
+        {/* ── Protected: Patient Only ── */}
+        <Route path="/therapists"     element={<ProtectedRoute allowedRoles={['PATIENT']}><FindTherapist /></ProtectedRoute>} />
+        <Route path="/therapists/:id" element={<ProtectedRoute allowedRoles={['PATIENT']}><TherapistProfile /></ProtectedRoute>} />
+        <Route path="/checkout"       element={<ProtectedRoute allowedRoles={['PATIENT']}><Checkout /></ProtectedRoute>} />
+        <Route path="/assessment"     element={<ProtectedRoute allowedRoles={['PATIENT']}><Assessment /></ProtectedRoute>} />
+        <Route path="/assessment-result/:id" element={<ProtectedRoute allowedRoles={['PATIENT']}><AssessmentResult /></ProtectedRoute>} />
+        <Route path="/assessments-history"   element={<ProtectedRoute allowedRoles={['PATIENT']}><AssessmentHistory /></ProtectedRoute>} />
+        <Route path="/progress"       element={<ProtectedRoute allowedRoles={['PATIENT']}><Progress /></ProtectedRoute>} />
 
-        {/* ── Assessment ── */}
-        <Route path="/assessment"            element={<Assessment />} />
-        <Route path="/assessment-result/:id" element={<AssessmentResult />} />
-        <Route path="/assessments-history"   element={<AssessmentHistory />} />
+        {/* ── Protected: Doctor Only ── */}
+        <Route path="/patients"      element={<ProtectedRoute allowedRoles={['DOCTOR']}><Patients /></ProtectedRoute>} />
+        <Route path="/appointments"  element={<ProtectedRoute allowedRoles={['DOCTOR', 'PATIENT']}><Appointments /></ProtectedRoute>} />
 
-        <Route path="/settings"     element={<Settings />} />
+        {/* ── Protected: Admin Only ── */}
+        <Route 
+          path="/admin" 
+          element={<Navigate to="/admin/approvals" replace />} 
+        />
+        <Route 
+          path="/admin/approvals" 
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <AdminApprovals />
+            </ProtectedRoute>
+          } 
+        />
 
         {/* ── Fallback ── */}
         <Route path="*" element={<Navigate to="/" replace />} />

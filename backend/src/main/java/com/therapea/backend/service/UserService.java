@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class UserService {
@@ -36,6 +37,8 @@ public class UserService {
         user.setRole(dto.getRole());
         return userRepository.save(user);
     }
+
+
 
     public UserEntity loginUser(LoginDTO dto) {
         UserEntity user = userRepository.findByEmail(dto.getEmail())
@@ -72,7 +75,7 @@ public class UserService {
         return userRepository.findByEmail(email).orElse(null);
     }
 
-    // 🔴 NEW: Securely change the user's password
+
     public void changePassword(String email, String oldPassword, String newPassword) {
         UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found."));
@@ -85,5 +88,10 @@ public class UserService {
         // 2. Encrypt the new password and save it
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+    }
+
+    public UserEntity findById(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
     }
 }
