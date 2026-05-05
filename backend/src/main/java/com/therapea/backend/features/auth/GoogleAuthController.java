@@ -1,7 +1,7 @@
 package com.therapea.backend.features.auth;
 
-import com.therapea.backend.entity.UserEntity;
-import com.therapea.backend.service.UserService;
+import com.therapea.backend.features.users.UserEntity;
+import com.therapea.backend.features.users.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
