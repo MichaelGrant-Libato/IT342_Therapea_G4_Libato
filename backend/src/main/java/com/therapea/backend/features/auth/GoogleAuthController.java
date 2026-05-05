@@ -1,7 +1,6 @@
-package com.therapea.backend.controller;
+package com.therapea.backend.features.auth;
 
 import com.therapea.backend.entity.UserEntity;
-import com.therapea.backend.service.OTPService;
 import com.therapea.backend.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,4 +1,6 @@
-package com.therapea.backend.dto;
+package com.therapea.backend.features.auth;
+
+import com.therapea.backend.dto.TagDTO;
 
 import java.util.List;
 

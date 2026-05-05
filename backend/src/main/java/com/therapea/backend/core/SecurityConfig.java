@@ -1,4 +1,4 @@
-package com.therapea.backend.config;
+package com.therapea.backend.core;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -1,6 +1,6 @@
 package com.therapea.backend.service;
 
-import com.therapea.backend.dto.LoginDTO;
+import com.therapea.backend.features.auth.LoginDTO;
 import com.therapea.backend.dto.UserRegistrationDTO;
 import com.therapea.backend.entity.UserEntity;
 import com.therapea.backend.repository.UserRepository;
@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @Service

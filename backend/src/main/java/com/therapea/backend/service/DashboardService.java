@@ -2,6 +2,7 @@ package com.therapea.backend.service;
 
 import com.therapea.backend.dto.*;
 import com.therapea.backend.entity.*;
+import com.therapea.backend.features.auth.SessionDTO;
 import com.therapea.backend.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

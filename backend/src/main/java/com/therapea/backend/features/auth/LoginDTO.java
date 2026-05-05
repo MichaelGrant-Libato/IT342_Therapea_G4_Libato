@@ -1,4 +1,4 @@
-    package com.therapea.backend.dto;
+    package com.therapea.backend.features.auth;
 
     public class LoginDTO {
         private String email;

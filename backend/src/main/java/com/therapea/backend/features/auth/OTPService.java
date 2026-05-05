@@ -1,4 +1,4 @@
-package com.therapea.backend.service;
+package com.therapea.backend.features.auth;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;

@@ -1,16 +1,14 @@
-package com.therapea.backend.controller;
+package com.therapea.backend.features.auth;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.therapea.backend.dto.DashboardDTO;
-import com.therapea.backend.dto.LoginDTO;
 import com.therapea.backend.dto.UserRegistrationDTO;
 import com.therapea.backend.entity.UserEntity;
 import com.therapea.backend.repository.UserRepository;
 import com.therapea.backend.service.EmailNotificationService;
-import com.therapea.backend.service.OTPService;
 import com.therapea.backend.service.UserService;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.beans.factory.annotation.Autowired;

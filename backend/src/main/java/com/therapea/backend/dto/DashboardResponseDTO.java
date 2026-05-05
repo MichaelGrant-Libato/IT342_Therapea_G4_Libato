@@ -1,5 +1,7 @@
 package com.therapea.backend.dto;
 
+import com.therapea.backend.features.auth.SessionDTO;
+
 import java.util.List;
 
 public class DashboardResponseDTO {
