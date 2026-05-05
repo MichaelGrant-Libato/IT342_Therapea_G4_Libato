@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/Assessment.css';
+import './Assessment.css';
 
 interface Question { id: number; section: string; text: string; sensitive?: boolean; }
 

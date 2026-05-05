@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { SidebarLayout } from '../components/SidebarLayout';
-import '../styles/TherapistProfile.css';
+import { SidebarLayout } from '../../core/components/SidebarLayout'
+import './TherapistProfile.css';
 
 const TherapistProfile: React.FC = () => {
   const navigate = useNavigate();

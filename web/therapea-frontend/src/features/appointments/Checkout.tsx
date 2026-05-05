@@ -1,17 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { SidebarLayout } from '../components/SidebarLayout';
-
-/**
- * THERAPEA PREMIUM CHECKOUT & RECEIPT ENGINE
- * Version 4.3.0
- * 
- * Includes: 
- * - Multi-step Intake Wizard
- * - Persistent Session Hydration (PayMongo Redirect Support)
- * - Automatic Database Synchronization on Return
- * - High-Fidelity Printable Receipt Generation
- */
+import { SidebarLayout } from '../../core/components/SidebarLayout';
+import './Checkout.css';
 
 /* ─── TYPES & INTERFACES ─── */
 interface Therapist {
@@ -514,4 +504,4 @@ const Checkout: React.FC = () => {
     );
 };
 
-export default Checkout;
+export default Checkout;    

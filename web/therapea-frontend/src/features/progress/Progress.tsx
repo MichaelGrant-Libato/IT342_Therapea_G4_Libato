@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SidebarLayout } from '../components/SidebarLayout';
-import '../styles/Progress.css';
+import { SidebarLayout } from '../../core/components/SidebarLayout'
+import './Progress.css';
 
 // ─── Interfaces ───
 interface UserData {

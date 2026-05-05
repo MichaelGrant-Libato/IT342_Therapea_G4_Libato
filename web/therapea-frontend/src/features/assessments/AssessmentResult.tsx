@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
-import '../styles/AssessmentResult.css';
+import './AssessmentResult.css';
 
 const AssessmentResult: React.FC = () => {
   const location = useLocation();

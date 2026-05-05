@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import "../styles/Register.css"; // Re-using register styles for clean layout
+import "../auth/Register.css";
 
 const Reference: React.FC = () => {
   const navigate = useNavigate();

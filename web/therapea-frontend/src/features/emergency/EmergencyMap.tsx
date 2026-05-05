@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import '../styles/EmergencyMap.css';
+import './EmergencyMap.css';
 
 // Fix for default Leaflet marker icons not loading in React
 import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';

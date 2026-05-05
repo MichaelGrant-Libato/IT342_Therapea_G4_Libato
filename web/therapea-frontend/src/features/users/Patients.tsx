@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { SidebarLayout } from '../components/SidebarLayout';
+import { SidebarLayout } from '../../core/components/SidebarLayout'
 import { useNavigate } from 'react-router-dom';
-import '../styles/Patients.css';
+import './Patients.css';
 
 interface PatientRecord {
   id: string;

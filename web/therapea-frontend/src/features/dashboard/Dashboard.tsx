@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SidebarLayout } from '../components/SidebarLayout';
-import '../styles/Dashboard.css';
+import { SidebarLayout } from '../../core/components/SidebarLayout';
+import './Dashboard.css';
 
 // ─── Interfaces ───
 interface UserData {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/AssessmentHistory.css';
+import './AssessmentHistory.css';
 
 interface Assessment {
   id: string; assessmentType: string; phq9Score: number; gad7Score: number;

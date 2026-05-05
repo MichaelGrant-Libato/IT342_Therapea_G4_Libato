@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import "../styles/LandingPage.css";
+import "./LandingPage.css";
 
 const NAV_LINKS = ["How It Works", "Our Providers", "Pricing", "FAQ"];
 

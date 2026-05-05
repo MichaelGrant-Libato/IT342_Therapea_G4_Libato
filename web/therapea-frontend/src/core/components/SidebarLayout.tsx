@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import '../styles/Dashboard.css';
+import "../../features/dashboard/Dashboard.css";
 
 const NavIcon = ({ type }: { type: string }) => {
   const paths: Record<string, JSX.Element> = {

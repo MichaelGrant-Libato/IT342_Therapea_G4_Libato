@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SidebarLayout } from '../components/SidebarLayout';
+import { SidebarLayout } from '../../core/components/SidebarLayout'
 import { createClient } from '@supabase/supabase-js';
-import '../styles/Profile.css';
+import './Profile.css';
 
 // Initialize Supabase Client using Vite Environment Variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;

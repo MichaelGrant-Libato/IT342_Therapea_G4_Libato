@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/AdminApprovals.css';
+import './AdminApprovals.css';
 
-/* ─── Types ─────────────────────────────────────────────── */
+
 interface DoctorRequest {
   id: string;
   fullName: string;

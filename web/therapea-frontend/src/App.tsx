@@ -1,28 +1,29 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
 import './index.css';
 
-import LandingPage from './pages/LandingPage';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Assessment from './pages/Assessment';
-import EmergencyMap from './pages/EmergencyMap';
-import Profile from './pages/Profile';
-import FindTherapist from './pages/FindTherapist';
-import Appointments from './pages/Appointments';
-import TherapistProfile from './pages/TherapistProfile';
-import Checkout from './pages/Checkout';
-import Patients from './pages/Patients'; 
-import Messages from './pages/Messages'; 
-import Progress from './pages/Progress';
-import Settings from './pages/Settings';
-import Reference from './pages/Reference';
-import AdminApprovals from './pages/AdminApprovals';
 
-// ── NEW IMPORTS ──
-import AssessmentResult from './pages/AssessmentResult';
-import AssessmentHistory from './pages/AssessmentHistory';
+import LandingPage from './features/landing/LandingPage';
+import Login from './features/auth/Login';
+import Register from './features/auth/Register';
+import Dashboard from './features/dashboard/Dashboard';
+import Assessment from './features/assessments/Assessment';
+import AssessmentResult from './features/assessments/AssessmentResult';
+import AssessmentHistory from './features/assessments/AssessmentHistory';
+import EmergencyMap from './features/emergency/EmergencyMap';
+import Profile from './features/users/Profile';
+import Patients from './features/users/Patients'; 
+import Settings from './features/users/Settings';
+import FindTherapist from './features/therapists/FindTherapist';
+import TherapistProfile from './features/therapists/TherapistProfile';
+import Appointments from './features/appointments/Appointments';
+import Checkout from './features/appointments/Checkout';
+import Reference from './features/appointments/Reference';
+import Messages from './features/messages/Messages'; 
+import Progress from './features/progress/Progress';
+import AdminApprovals from './features/admin/AdminApprovals';
+
 
 // ── ROLE-BASED PROTECTED ROUTE COMPONENT ──
 const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) => {
@@ -71,6 +72,8 @@ function App() {
 
         {/* ── Protected: Doctor Only ── */}
         <Route path="/patients"      element={<ProtectedRoute allowedRoles={['DOCTOR']}><Patients /></ProtectedRoute>} />
+        
+        {/* ── Protected: Doctor & Patient ── */}
         <Route path="/appointments"  element={<ProtectedRoute allowedRoles={['DOCTOR', 'PATIENT']}><Appointments /></ProtectedRoute>} />
 
         {/* ── Protected: Admin Only ── */}

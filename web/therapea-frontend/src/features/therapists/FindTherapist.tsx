@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../styles/FindTherapist.css';
+import './FindTherapist.css';
 
 const SPECIALTIES  = ['All Specialties','Anxiety','Depression','Trauma','PTSD','Stress','CBT','EMDR','Grief'];
 const AVAILABILITY = ['All Availability','Available Today','Available This Week','Online Only'];

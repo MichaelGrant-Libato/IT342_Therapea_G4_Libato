@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import "../styles/Register.css";
+import "./Register.css";
 
 const Register: React.FC = () => {
   const navigate = useNavigate();

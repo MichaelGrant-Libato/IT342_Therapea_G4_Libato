@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SidebarLayout } from '../components/SidebarLayout';
-import '../styles/Messages.css';
+import { SidebarLayout } from '../../core/components/SidebarLayout'
+import './Messages.css';
 
 interface UserData {
   email: string;

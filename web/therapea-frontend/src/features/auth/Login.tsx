@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import "../styles/Login.css";
+import "./Login.css";
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -415,4 +415,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default Login; 
