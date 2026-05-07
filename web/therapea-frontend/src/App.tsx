@@ -23,6 +23,7 @@ import Reference from './features/appointments/Reference';
 import Messages from './features/messages/Messages'; 
 import Progress from './features/progress/Progress';
 import AdminApprovals from './features/admin/AdminApprovals';
+import VideoRoom from './features/videocall/VideoRoom';
 
 
 // ── ROLE-BASED PROTECTED ROUTE COMPONENT ──
@@ -54,6 +55,7 @@ function App() {
         <Route path="/register"  element={<Register />} />
         <Route path="/emergency" element={<EmergencyMap />} />
         <Route path="/reference" element={<Reference />} />
+        <Route path="/video-room" element={<VideoRoom />} />
 
         {/* ── Protected: All Roles ── */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

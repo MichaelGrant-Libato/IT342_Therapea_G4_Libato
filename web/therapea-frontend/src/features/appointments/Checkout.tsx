@@ -25,7 +25,6 @@ const Checkout: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     
-    // Grabs therapist data passed from the previous screen
     const { therapist } = (location.state as { therapist: Therapist }) || {};
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8083';
 
@@ -51,12 +50,10 @@ const Checkout: React.FC = () => {
     const [confirmationNumber, setConfirmationNumber] = useState('');
     const [receiptData, setReceiptData] = useState<BookingReceipt | null>(null);
     
-    // ✅ CRITICAL: Detects if the component is loading because the user just returned from PayMongo
     const [isVerifyingReturn, setIsVerifyingReturn] = useState(() => {
         return new URLSearchParams(window.location.search).get('status') === 'success';
     });
 
-    // Data States
     const [providerBookedSlots, setProviderBookedSlots] = useState<{ date: string, time: string }[]>([]);
 
     /* ─── MEMOIZED CONSTANTS ─── */
@@ -69,7 +66,7 @@ const Checkout: React.FC = () => {
         return { base, deposit, pending: base - deposit };
     }, [therapist, paymentMethod]);
 
-    /* ─── EFFECT: PAYMONGO RETURN HANDLER (THE BRAIN) ─── */
+    /* ─── EFFECT: PAYMONGO RETURN HANDLER ─── */
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const status = urlParams.get('status');
@@ -78,11 +75,13 @@ const Checkout: React.FC = () => {
             const cachedBooking = sessionStorage.getItem('pendingTherapyBooking');
 
             if (cachedBooking) {
+                // FIXED: WIPE CACHE IMMEDIATELY! This prevents React Strict Mode from double-firing the DB save.
+                sessionStorage.removeItem('pendingTherapyBooking');
+                
                 const parsedData = JSON.parse(cachedBooking);
 
                 const finalizeBookingOnServer = async () => {
                     try {
-                        // We are back from PayMongo, the payment is secure, NOW we save to DB
                         const response = await fetch(`${API_BASE_URL}/api/appointments/book`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -90,16 +89,11 @@ const Checkout: React.FC = () => {
                         });
 
                         if (response.ok) {
-                            // Generate internal tracking ID
                             const txId = `THP-ACK-${Date.now()}-${Math.floor(Math.random() * 999)}`;
                             setConfirmationNumber(txId);
                             setReceiptData(parsedData.receiptData);
                             
-                            // 1. WIPE CACHE to prevent double-booking if the user hits refresh
-                            sessionStorage.removeItem('pendingTherapyBooking');
-                            // 2. CLEAN URL (remove ?status=success so it looks clean)
                             window.history.replaceState({}, document.title, window.location.pathname);
-                            // 3. SHOW RECEIPT
                             setStep(4);
                         } else {
                             throw new Error("Failed to save booking to database.");
@@ -114,14 +108,12 @@ const Checkout: React.FC = () => {
 
                 finalizeBookingOnServer();
             } else {
-                // If there's no cache, they might have manually typed the URL or refreshed
                 setIsVerifyingReturn(false);
                 if (!therapist) navigate('/dashboard');
             }
             return;
         }
 
-        // Standard Entry Check: Prevent users from accessing the page directly without a therapist selected
         if (!therapist && !status) {
             navigate('/therapists', { replace: true });
         }
@@ -161,12 +153,11 @@ const Checkout: React.FC = () => {
 
     /* ─── CHECKOUT EXECUTION ─── */
     const handleCheckout = async () => {
-        setIsVerifyingReturn(true); // Re-use the loading screen
+        setIsVerifyingReturn(true);
         const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
         const user = JSON.parse(storedUser || '{}');
         const fmtDate = selectedDate?.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
-        // Step A: Prepare data to be saved AFTER redirect and put it in SessionStorage
         const sessionStoreData = {
             dbPayload: {
                 email: user.email,
@@ -192,7 +183,6 @@ const Checkout: React.FC = () => {
 
         sessionStorage.setItem('pendingTherapyBooking', JSON.stringify(sessionStoreData));
 
-        // Step B: Create PayMongo Checkout Session Link
         try {
             const response = await fetch(`${API_BASE_URL}/api/payments/create-link`, {
                 method: 'POST',
@@ -206,7 +196,6 @@ const Checkout: React.FC = () => {
 
             const linkData = await response.json();
             if (linkData.success && linkData.checkoutUrl) {
-                // REDIRECT TO PAYMONGO (We leave the React app here)
                 window.location.href = linkData.checkoutUrl;
             } else {
                 setGlobalError("Payment gateway is temporarily unavailable. Please try again later.");
@@ -251,8 +240,6 @@ const Checkout: React.FC = () => {
     );
 
     /* ─── MAIN RENDER LOGIC ─── */
-
-    // Loading State for Post-Payment Verification
     if (isVerifyingReturn) {
         return (
             <SidebarLayout title="Verifying Transaction">
@@ -269,7 +256,6 @@ const Checkout: React.FC = () => {
         );
     }
 
-    // Safety net: Don't render checkout forms if there's no therapist and we aren't showing the receipt
     if (!therapist && step !== 4) return null;
 
     return (
@@ -504,4 +490,4 @@ const Checkout: React.FC = () => {
     );
 };
 
-export default Checkout;    
+export default Checkout;

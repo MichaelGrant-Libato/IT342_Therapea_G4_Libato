@@ -1,0 +1,195 @@
+.video-room-container {
+  width: 100vw;
+  height: 100vh;
+  background-color: #111827; /* Dark background like Messenger */
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.remote-video-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Picture in Picture for Local User */
+.local-video-container {
+  position: absolute;
+  bottom: 120px;
+  right: 40px;
+  width: 240px;
+  height: 160px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  border: 2px solid #374151;
+  background-color: #1f2937;
+  z-index: 10;
+}
+
+/* The floating control bar at the bottom */
+.call-controls {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(31, 41, 55, 0.85);
+  backdrop-filter: blur(8px);
+  padding: 15px 30px;
+  border-radius: 50px;
+  display: flex;
+  gap: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.control-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+}
+
+.control-btn.active {
+  background-color: #374151; /* Dark gray for ON */
+}
+
+.control-btn.active:hover {
+  background-color: #4b5563;
+}
+
+.control-btn.muted {
+  background-color: #ef4444; /* Red for OFF/MUTED */
+}
+
+.control-btn.muted:hover {
+  background-color: #dc2626;
+}
+
+.end-call-btn {
+  background-color: #ef4444;
+  padding: 0 25px;
+  border-radius: 25px;
+  width: auto;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.end-call-btn:hover {
+  background-color: #dc2626;
+}
+
+.waiting-text {
+  color: #9ca3af;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+/* VideoRoom.css */
+.video-room-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  background-color: #111827;
+  position: relative;
+  overflow: hidden;
+}
+
+.remote-video-container {
+  flex: 1; /* Takes up all available space */
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #000;
+}
+
+/* Make the local video a "floating" box in the corner */
+.local-video-container {
+  position: absolute;
+  bottom: 100px;
+  right: 20px;
+  width: 150px;
+  height: 200px;
+  background-color: #1f2937;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  border: 2px solid #374151;
+  z-index: 10;
+}
+
+.waiting-text {
+  color: white;
+  font-size: 1.2rem;
+  text-align: center;
+  padding: 20px;
+}
+
+.call-controls {
+  height: 80px;
+  background-color: #1f2937;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 10px;
+  z-index: 20;
+}
+
+.control-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  transition: all 0.2s;
+}
+
+.control-btn.active {
+  background-color: #374151;
+}
+
+.control-btn.muted {
+  background-color: #ef4444; /* Red when off */
+}
+
+.end-call-btn {
+  width: auto;
+  padding: 0 20px;
+  border-radius: 25px;
+  background-color: #ef4444;
+  font-weight: bold;
+}
+
+.local-video-container {
+  position: absolute;
+  bottom: 100px;
+  right: 20px;
+  width: 150px;
+  height: 200px;
+  background-color: #1f2937;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  border: 2px solid #374151;
+  z-index: 10;
+}

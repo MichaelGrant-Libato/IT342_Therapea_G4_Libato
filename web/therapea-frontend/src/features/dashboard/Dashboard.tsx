@@ -80,6 +80,7 @@ const Dashboard: React.FC = () => {
   const [assessmentToDelete, setAssessmentToDelete] = useState<string | null>(null);
   
   const navigate  = useNavigate();
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8083';
 
   useEffect(() => {
     const load = async () => {
@@ -96,7 +97,7 @@ const Dashboard: React.FC = () => {
 
       // 1. Dynamic Profile Fetch
       try {
-        const pRes = await fetch(`http://localhost:8083/api/dashboard/profile?email=${encodeURIComponent(email)}`);
+        const pRes = await fetch(`${API_BASE_URL}/api/dashboard/profile?email=${encodeURIComponent(email)}`);
         const pData = await pRes.json();
         if (pData.success) {
           setUser(pData as UserData);
@@ -108,11 +109,11 @@ const Dashboard: React.FC = () => {
         setUser({ ...parsed, role });
       }
 
-      // 2. Dynamic Assessments Fetch (SECURE DOCTOR QUEUE LOGIC)
+      // 2. Dynamic Assessments Fetch
       try {
         const endpoint = role === 'DOCTOR' 
-          ? `http://localhost:8083/api/assessments/doctor-queue?doctorEmail=${encodeURIComponent(email)}` 
-          : `http://localhost:8083/api/assessments/user?email=${encodeURIComponent(email)}`;
+          ? `${API_BASE_URL}/api/assessments/doctor-queue?doctorEmail=${encodeURIComponent(email)}` 
+          : `${API_BASE_URL}/api/assessments/user?email=${encodeURIComponent(email)}`;
 
         const aRes = await fetch(endpoint);
         const aData = await aRes.json();
@@ -129,7 +130,7 @@ const Dashboard: React.FC = () => {
 
       // 3. Dynamic Appointments Fetch
       try {
-        const aptRes = await fetch(`http://localhost:8083/api/appointments/user?email=${encodeURIComponent(email)}`);
+        const aptRes = await fetch(`${API_BASE_URL}/api/appointments/user?email=${encodeURIComponent(email)}`);
         const aptData = await aptRes.json();
         if (aptData.success) {
           setAppointments(aptData.appointments);
@@ -144,7 +145,7 @@ const Dashboard: React.FC = () => {
       // 4. Dynamic Patient Roster Fetch (Doctor Only)
       if (role === 'DOCTOR') {
         try {
-          const patRes = await fetch(`http://localhost:8083/api/patients/doctor?email=${encodeURIComponent(email)}`);
+          const patRes = await fetch(`${API_BASE_URL}/api/patients/doctor?email=${encodeURIComponent(email)}`);
           const patData = await patRes.json();
           if (patData.success) {
             setPatientsList(patData.patients);
@@ -160,12 +161,12 @@ const Dashboard: React.FC = () => {
       setIsLoading(false);
     };
     load();
-  }, [navigate]);
+  }, [navigate, API_BASE_URL]);
 
   const handleConfirmDelete = async () => {
     if (!assessmentToDelete) return;
     try {
-      await fetch(`http://localhost:8083/api/assessments/${assessmentToDelete}`, { method: 'DELETE' });
+      await fetch(`${API_BASE_URL}/api/assessments/${assessmentToDelete}`, { method: 'DELETE' });
     } catch (error) {
       console.error("Failed to delete from API", error);
     }
@@ -208,6 +209,7 @@ const Dashboard: React.FC = () => {
             patientsList={patientsList} 
             navigate={navigate} 
             onDeleteClick={setAssessmentToDelete} 
+            apiUrl={API_BASE_URL}
           />
         : <PatientView 
             assessments={assessments} 
@@ -266,7 +268,7 @@ const PatientView: React.FC<{ assessments: Assessment[]; appointments: Appointme
                   </div>
                 </div>
               </div>
-              <button className="db-join-btn" onClick={() => navigate('/appointments')}>Join video call</button>
+              <button className="db-join-btn" onClick={() => navigate('/video-room')}>Join video call</button>
             </div>
           ) : lastCompletedApt ? (
             <div className="db-empty" style={{ padding: '20px 0', alignItems: 'flex-start', textAlign: 'left' }}>
@@ -365,9 +367,8 @@ const PatientView: React.FC<{ assessments: Assessment[]; appointments: Appointme
 };
 
 /* ─── Doctor View ───────────────────────────────────────────────────────── */
-const DoctorView: React.FC<{ assessments: Assessment[]; appointments: Appointment[]; patientsList: PatientRecord[]; navigate: any; onDeleteClick: (id: string) => void }> = ({ assessments, appointments, patientsList, navigate }) => {
+const DoctorView: React.FC<{ assessments: Assessment[]; appointments: Appointment[]; patientsList: PatientRecord[]; navigate: any; onDeleteClick: (id: string) => void; apiUrl: string }> = ({ assessments, appointments, patientsList, navigate, apiUrl }) => {
   
-  // THE TRIAGE QUEUE LOGIC 
   const pending = assessments.filter(a => a.status === 'Pending').sort((a, b) => {
     const riskWeight: Record<string, number> = { High: 4, Moderate: 3, Mild: 2, Low: 1 };
     const weightA = riskWeight[a.riskLevel] || 0;
@@ -431,7 +432,7 @@ const DoctorView: React.FC<{ assessments: Assessment[]; appointments: Appointmen
                   <div className="db-triage-actions">
                     <button className="db-action-btn" title="View details" onClick={() => navigate(`/assessment-result/${a.id}`, { state: { result: a } })}>View Results</button>
                     <button className="db-mark-btn" onClick={async () => {
-                      await fetch(`http://localhost:8083/api/assessments/${a.id}/review`, { method: 'PATCH' });
+                      await fetch(`${apiUrl}/api/assessments/${a.id}/review`, { method: 'PATCH' });
                       window.location.reload();
                     }}>
                       <NavIcon type="check" /> Mark Reviewed
@@ -466,7 +467,7 @@ const DoctorView: React.FC<{ assessments: Assessment[]; appointments: Appointmen
                     <div className="db-sch-type">{apt.type}</div>
                   </div>
                   {apt.type === 'Telehealth' ? (
-                    <button className="db-join-btn small" onClick={() => navigate('/appointments')}><NavIcon type="video" /> Join</button>
+                    <button className="db-join-btn small" onClick={() => navigate('/video-room')}><NavIcon type="video" /> Join</button>
                   ) : (
                     <span className="db-card-chip" style={{ background: '#F3F4F6', color: '#4B5563' }}>Clinic</span>
                   )}

@@ -32,8 +32,9 @@ public class SecurityConfig {
                                 "/api/patients/**",
                                 "/api/messages/**",
                                 "/api/users/**",
-                                "/api/payments/**", // Whitelisted the new payment endpoint!
-                                "/api/admin/**"     // ✅ ADDED: Whitelisted the admin dashboard endpoints!
+                                "/api/payments/**",
+                                "/api/admin/**",
+                                "/api/video/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 );
