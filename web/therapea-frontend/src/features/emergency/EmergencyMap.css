@@ -24,12 +24,14 @@
   --shadow-sm:  0 2px 8px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.04);
 }
 
+/* 🔴 FIXED: Enforced strict 100vh height and 100vw width */
 .em-root {
   display: flex;
-  min-height: 100vh;
+  height: 100vh; 
+  width: 100vw;
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);
-  overflow: hidden; /* Prevents double scrolling when map is loaded */
+  overflow: hidden; 
   color: var(--text-main);
   line-height: 1.6;
 }
@@ -229,7 +231,7 @@
   font-weight: 600;
   font-family: 'DM Sans', sans-serif;
   cursor: pointer;
-  margin-top: 12px;
+  margin-top: 16px;
   transition: all 0.2s;
   display: inline-block;
   text-align: center;
@@ -241,6 +243,34 @@
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(82, 112, 80, 0.35);
 }
+
+.em-dir-btn:disabled { 
+  opacity: 0.6; 
+  cursor: not-allowed; 
+}
+
+/* ── Route Statistics ── */
+.em-route-stats { 
+  display: flex; 
+  gap: 12px; 
+  margin-top: 16px; 
+  padding: 12px; 
+  background: #f8fafc; 
+  border-radius: 12px; 
+  border: 1px solid #e2e8f0; 
+}
+.em-route-box { 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 4px; 
+}
+.em-route-box svg { color: #64748b; }
+.em-route-time { font-size: 13px; font-weight: 700; color: #1e293b; }
+.em-route-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+.em-dist-pill { display: inline-block; background: #e2e8f0; color: #475569; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-bottom: 8px; }
 
 /* ── Crisis Banner ── */
 .em-crisis {
@@ -278,10 +308,23 @@
 /* ── Leaflet Map Container ── */
 .em-map-container {
   flex: 1;
-  height: 100vh;
   position: relative;
+  height: 100%;
+  min-height: 100vh; /* 🔴 FIXED: Ensure it is at least screen height */
   z-index: 1;
   background-color: var(--border-subtle); 
+}
+
+/* 🔴 CRITICAL FIX: Forces Leaflet's internal map wrapper to physically pin to its parent container */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
 }
 
 .em-map-loading {
@@ -294,7 +337,33 @@
   font-weight: 500;
 }
 
-/* Override Leaflet Popup Styles to match theme */
+/* ── Locate Me Button ── */
+.em-locate-btn { 
+  position: absolute; 
+  bottom: 30px; 
+  right: 20px; 
+  z-index: 1000; 
+  background: white; 
+  border: 2px solid rgba(0,0,0,0.1); 
+  border-radius: 12px; 
+  width: 48px; 
+  height: 48px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  cursor: pointer; 
+  color: #1e293b; 
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+  transition: 0.2s; 
+}
+.em-locate-btn:hover { 
+  background: #f8fafc; 
+  color: var(--primary-dark); 
+  transform: translateY(-2px); 
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15); 
+}
+
+/* Override Leaflet Popup Styles */
 .leaflet-popup-content-wrapper {
   border-radius: var(--radius-md) !important;
   font-family: 'DM Sans', sans-serif;
@@ -330,5 +399,6 @@
   
   .em-map-container { 
     height: 50vh; 
+    min-height: 50vh; 
   }
 }

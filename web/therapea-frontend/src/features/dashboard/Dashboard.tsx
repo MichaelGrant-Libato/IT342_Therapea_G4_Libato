@@ -32,6 +32,7 @@ interface Appointment {
 interface PatientRecord {
   id: string;
   name: string;
+  email: string;
   status: string;        
   lastSession: string;
 }
@@ -95,18 +96,31 @@ const Dashboard: React.FC = () => {
 
       let role = parsed.role || 'PATIENT';
 
-      // 1. Dynamic Profile Fetch
+      // 1. Dynamic Profile Fetch & Security Redirect
       try {
         const pRes = await fetch(`${API_BASE_URL}/api/dashboard/profile?email=${encodeURIComponent(email)}`);
         const pData = await pRes.json();
         if (pData.success) {
           setUser(pData as UserData);
           role = pData.role;
+          
+          if (role === 'DOCTOR' && !pData.profileCompleted) {
+            navigate('/profile', { replace: true });
+            return;
+          }
         } else {
           setUser({ ...parsed, role });
+          if (role === 'DOCTOR' && !parsed.profileCompleted) {
+            navigate('/profile', { replace: true });
+            return;
+          }
         }
       } catch {
         setUser({ ...parsed, role });
+        if (role === 'DOCTOR' && !parsed.profileCompleted) {
+          navigate('/profile', { replace: true });
+          return;
+        }
       }
 
       // 2. Dynamic Assessments Fetch
@@ -219,6 +233,7 @@ const Dashboard: React.FC = () => {
           />
       }
 
+      {/* Deletion Modal */}
       {assessmentToDelete && (
         <div className="db-modal-overlay" onClick={() => setAssessmentToDelete(null)}>
           <div className="db-modal-card" onClick={e => e.stopPropagation()}>
@@ -394,6 +409,63 @@ const DoctorView: React.FC<{ assessments: Assessment[]; appointments: Appointmen
 
   return (
     <>
+      {/* 🔴 INJECTED CSS FIX FOR UPCOMING SCHEDULE SPACING */}
+      <style>{`
+        .custom-schedule-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-top: 20px;
+        }
+        .custom-schedule-item {
+          display: flex;
+          align-items: center;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 16px;
+          gap: 20px;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .custom-schedule-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .custom-sch-time {
+          min-width: 100px;
+          border-right: 1px solid #cbd5e1;
+          padding-right: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .custom-sch-time span {
+          font-size: 12.5px;
+          color: #64748b;
+          white-space: nowrap;
+        }
+        .custom-sch-time strong {
+          font-size: 14px;
+          color: #0f172a;
+          white-space: nowrap;
+        }
+        .custom-sch-details {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+        .custom-sch-name {
+          font-weight: 700;
+          font-size: 15px;
+          color: #1e293b;
+        }
+        .custom-sch-type {
+          font-size: 13.5px;
+          color: #64748b;
+        }
+      `}</style>
+
       <div className="db-stats-grid">
         {stats.map(s => (
           <div key={s.label} className={`db-stat-card accent-${s.accent}`}>
@@ -452,24 +524,26 @@ const DoctorView: React.FC<{ assessments: Assessment[]; appointments: Appointmen
             <span className="db-section-title">Upcoming Schedule</span>
             <button className="db-action-btn" onClick={() => navigate('/appointments')}><NavIcon type="calendar" /></button>
           </div>
-          <div className="db-schedule-list">
+          
+          {/* 🔴 FIXED: Using the new custom styles for perfect flexbox alignment */}
+          <div className="custom-schedule-list">
             {upcomingAppointments.length === 0 ? (
                <div className="db-empty" style={{ padding: '24px 0' }}><p>No upcoming appointments.</p></div>
             ) : (
               displayedAppointments.map(apt => (
-                <div key={apt.id} className="db-schedule-item">
-                  <div className="db-sch-time">
-                    <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)' }}>{apt.date}</span>
-                    {apt.time}
+                <div key={apt.id} className="custom-schedule-item">
+                  <div className="custom-sch-time">
+                    <span>{apt.date}</span>
+                    <strong>{apt.time}</strong>
                   </div>
-                  <div className="db-sch-details">
-                    <div className="db-sch-name">{apt.patientName}</div>
-                    <div className="db-sch-type">{apt.type}</div>
+                  <div className="custom-sch-details">
+                    <div className="custom-sch-name">{apt.patientName}</div>
+                    <div className="custom-sch-type">{apt.type}</div>
                   </div>
                   {apt.type === 'Telehealth' ? (
                     <button className="db-join-btn small" onClick={() => navigate('/video-room')}><NavIcon type="video" /> Join</button>
                   ) : (
-                    <span className="db-card-chip" style={{ background: '#F3F4F6', color: '#4B5563' }}>Clinic</span>
+                    <span className="db-card-chip" style={{ background: '#e2e8f0', color: '#475569', fontWeight: 600 }}>Clinic</span>
                   )}
                 </div>
               ))
@@ -491,7 +565,6 @@ const DoctorView: React.FC<{ assessments: Assessment[]; appointments: Appointmen
       <div className="db-section-card" style={{ marginTop: 24 }}>
         <div className="db-section-header">
           <span className="db-section-title">Recent Patients</span>
-          <button className="db-btn-outline" style={{ padding: '6px 16px', fontSize: 13 }} onClick={() => navigate('/patients')}>View All</button>
         </div>
         {patientsList.length === 0 ? (
           <div className="db-empty" style={{ padding: '24px 0' }}><p>No active patients.</p></div>
@@ -499,7 +572,12 @@ const DoctorView: React.FC<{ assessments: Assessment[]; appointments: Appointmen
           <div className="db-table-wrap">
             <table>
               <thead>
-                <tr><th>Patient Name</th><th>Status</th><th>Last Session</th><th>Action</th></tr>
+                <tr>
+                  <th>Patient Name</th>
+                  <th>Status</th>
+                  <th>Email</th>
+                  <th>Action</th>
+                </tr>
               </thead>
               <tbody>
                 {patientsList.slice(0, 3).map((p) => (
@@ -510,12 +588,16 @@ const DoctorView: React.FC<{ assessments: Assessment[]; appointments: Appointmen
                         {p.status}
                       </span>
                     </td>
-                    <td className="db-td-muted">{p.lastSession}</td>
+                    <td className="db-td-muted">{p.email}</td>
                     <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button className="db-action-btn">Open File</button>
-                        <button className="db-action-btn" style={{ background: 'var(--bg-alt)', color: 'var(--text-main)', border: '1px solid var(--border)' }}>Schedule Follow-up</button>
-                      </div>
+                      {/* 🔴 FIXED: Instead of fake buttons, this navigates smoothly to the roster so the doctor can use the modal */}
+                      <button 
+                        className="db-action-btn" 
+                        style={{ border: '1px solid var(--border)', background: 'white', padding: '6px 16px', borderRadius: '6px', fontWeight: 600 }}
+                        onClick={() => navigate('/patients')}
+                      >
+                        Go to Patient Roster
+                      </button>
                     </td>
                   </tr>
                 ))}

@@ -15,11 +15,10 @@ public class DashboardResponseDTO {
     public boolean profileCompleted;
     public String createdAt;
     public String lastLogin;
-
-    // 🔴 Changed from private to public!
     public String profilePictureUrl;
+    public String availableSchedule;
+    public String whatToExpect;
 
-    // Dynamic Data
     public List<StatDTO> stats;
     public List<SessionDTO> sessions;
     public List<ProgressDTO> progressItems;

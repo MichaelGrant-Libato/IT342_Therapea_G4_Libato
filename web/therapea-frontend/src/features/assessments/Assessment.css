@@ -28,7 +28,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  min-height: 75vh;
   background: var(--bg);
   padding: 40px 24px;
   font-family: 'DM Sans', sans-serif;
@@ -37,6 +37,7 @@
 }
 
 .asm-card {
+  margin: 0 auto !important;
   background: var(--surface);
   border-radius: var(--radius-xl);
   border: 1px solid var(--border-subtle);

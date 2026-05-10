@@ -14,30 +14,26 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    // ─── 1. PROFILE PICTURE UPDATE ───
+    // ─── 1. PROFILE UPDATE (Picture, Schedule, Expectations, Bio, etc.) ───
     @PatchMapping("/update")
-    public ResponseEntity<?> updateProfile(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> updateProfile(@RequestBody UserRegistrationDTO dto) {
         try {
-            String email = (String) payload.get("email");
-            UserEntity user = userService.getUserByEmail(email);
-
-            if (user != null) {
-                if (payload.containsKey("profilePictureUrl")) {
-                    user.setProfilePictureUrl((String) payload.get("profilePictureUrl"));
-                }
-
-                userService.saveUser(user);
-                return ResponseEntity.ok(Map.of("success", true, "message", "Profile updated successfully"));
-            } else {
-                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "User not found"));
+            // Check if the email exists in the DTO
+            if (dto.getEmail() == null || dto.getEmail().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Email is required to update profile"));
             }
+
+            // Call the robust update method in the service
+            UserEntity updatedUser = userService.updateUserProfile(dto.getEmail(), dto);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Profile updated successfully"));
+
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
     }
 
     // ─── 2. CHANGE PASSWORD (SETTINGS) ───
-    // 🔴 NEW: Endpoint for the Settings page to change password
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody Map<String, String> payload) {
         try {
@@ -49,11 +45,9 @@ public class UserController {
                 return ResponseEntity.badRequest().body(Map.of("success", false, "message", "New password must be at least 6 characters."));
             }
 
-            // Call the new method we just added to UserService!
             userService.changePassword(email, oldPassword, newPassword);
             return ResponseEntity.ok(Map.of("success", true, "message", "Password updated successfully!"));
         } catch (Exception e) {
-            // This catches the "Incorrect current password" or "User not found" errors
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
         }
     }

@@ -35,16 +35,16 @@ public class DashboardService {
         response.createdAt = user.getCreatedAt() != null ? user.getCreatedAt().toString() : null;
         response.lastLogin = user.getLastLogin() != null ? user.getLastLogin().toString() : null;
         response.profilePictureUrl = user.getProfilePictureUrl();
+        response.availableSchedule = user.getAvailableSchedule();
+        response.whatToExpect = user.getWhatToExpect();
 
         UUID userId = user.getId();
 
-        // 1. Fetch & Map Stats
         List<StatEntity> statEntities = statRepo.findByUserId(userId);
         response.stats = statEntities.stream()
                 .map(s -> new StatDTO(s.getIconKey(), s.getColor(), s.getStatValue(), s.getLabel(), s.getChangeStr(), s.isPositive()))
                 .collect(Collectors.toList());
 
-        // 2. UPDATED: Fetch & Map Appointments with role-based naming
         List<AppointmentEntity> apptEntities = appointmentRepo.findByUserId(userId);
         response.sessions = apptEntities.stream()
                 .map(a -> {
@@ -52,7 +52,6 @@ public class DashboardService {
                             .map(t -> new TagDTO(t.getLabel(), t.getCssClass()))
                             .collect(Collectors.toList());
 
-                    // Determine which name to show based on the user's role
                     String displayName = user.getRole().equalsIgnoreCase("DOCTOR")
                             ? a.getPatientName()
                             : a.getProviderName();
@@ -67,7 +66,6 @@ public class DashboardService {
                     );
                 }).collect(Collectors.toList());
 
-        // 3. Fetch & Map Progress
         List<ProgressEntity> progEntities = progressRepo.findByUserId(userId);
         response.progressItems = progEntities.stream()
                 .map(p -> new ProgressDTO(p.getLabel(), p.getProgressValue(), p.getCssClass()))

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SidebarLayout } from '../../core/components/SidebarLayout';
 import './Assessment.css';
 
 interface Question { id: number; section: string; text: string; sensitive?: boolean; }
@@ -128,7 +129,7 @@ const Assessment: React.FC = () => {
         body: JSON.stringify({
           email: user.email, 
           userId: user.userId,
-          patientName: user.fullName || user.name || 'Patient', // <--- Added patientName here
+          patientName: user.fullName || user.name || 'Patient', 
           assessmentType: 'Triage Assessment',
           phq9Score: r.phq9, 
           gad7Score: r.gad7,
@@ -152,102 +153,107 @@ const Assessment: React.FC = () => {
   };
 
   if (screen === 'intro') return (
-    <div className="asm-container">
-      <div className="asm-card intro-card">
-        <div className="asm-graphic">
-          <div className="asm-icon-wrap">
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-5 0v-15A2.5 2.5 0 0 1 9.5 2z"/>
-              <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 5 0v-15A2.5 2.5 0 0 0 14.5 2z"/>
-              <path d="M12 4.5a2.5 2.5 0 1 0-5 0"/><path d="M12 4.5a2.5 2.5 0 1 1 5 0"/>
-            </svg>
+    <SidebarLayout title="Triage Assessment">
+      <div className="asm-container">
+        <div className="asm-card intro-card">
+          <div className="asm-graphic">
+            <div className="asm-icon-wrap">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-5 0v-15A2.5 2.5 0 0 1 9.5 2z"/>
+                <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 5 0v-15A2.5 2.5 0 0 0 14.5 2z"/>
+                <path d="M12 4.5a2.5 2.5 0 1 0-5 0"/><path d="M12 4.5a2.5 2.5 0 1 1 5 0"/>
+              </svg>
+            </div>
+            <div className="asm-graphic-line" />
           </div>
-          <div className="asm-graphic-line" />
+          <h1 className="asm-title">Smart Triage Assessment</h1>
+          <div className="asm-info-box">
+            This assessment uses clinically validated questions (PHQ-9 and GAD-7) to get a picture
+            of how you have been feeling over the past two weeks. It takes about 5–10 minutes.
+            Your answers are private and used only to give you a personalised result.
+          </div>
+          <button className="asm-btn-primary" onClick={() => setScreen('quiz')}>Start the assessment</button>
         </div>
-        <h1 className="asm-title">Smart Triage Assessment</h1>
-        <div className="asm-info-box">
-          This assessment uses clinically validated questions (PHQ-9 and GAD-7) to get a picture
-          of how you have been feeling over the past two weeks. It takes about 5–10 minutes.
-          Your answers are private and used only to give you a personalised result.
-        </div>
-        <button className="asm-btn-primary" onClick={() => setScreen('quiz')}>Start the assessment</button>
-        <button className="asm-btn-text" onClick={() => navigate('/dashboard')} style={{ marginTop: 16 }}>← Back</button>
       </div>
-    </div>
+    </SidebarLayout>
   );
 
   if (screen === 'quiz') return (
-    <div className="asm-container">
-      <div className="asm-card quiz-card">
-        <div className="asm-progress-wrap"><div className="asm-progress-fill" style={{ width:`${pct}%` }} /></div>
-        <div className="asm-meta"><span className="asm-pct">{pct}% complete</span><span className="asm-count">Question {currentQ + 1} of {total}</span></div>
-        <div className="asm-section-label">{q.section}</div>
-        <h2 className="asm-question">{q.text}</h2>
-        {q.sensitive && (
-          <div className="asm-alert">If you are in crisis right now, please call or text <strong>988</strong> (Suicide and Crisis Lifeline) for immediate support.</div>
-        )}
-        <div className="asm-options">
-          {OPTIONS.map(opt => (
-            <button key={opt.value} className={`asm-option-btn ${selected === opt.value ? 'selected' : ''}`} onClick={() => handleSelect(opt.value)}>
-              <div className="asm-radio">{selected === opt.value && <div className="asm-radio-dot" />}</div>
-              {opt.label}
-            </button>
-          ))}
-        </div>
-        {errorMsg && <div className="asm-error">{errorMsg}</div>}
-        <div className="asm-footer">
-          <button className="asm-btn-outline" onClick={handleBack}>Back</button>
-          <button className="asm-btn-primary" disabled={selected === null || isSaving} onClick={handleNext}>{isSaving ? 'Saving…' : isLast ? 'See my results' : 'Next'}</button>
+    <SidebarLayout title="Triage Assessment">
+      <div className="asm-container">
+        <div className="asm-card quiz-card">
+          <div className="asm-progress-wrap"><div className="asm-progress-fill" style={{ width:`${pct}%` }} /></div>
+          <div className="asm-meta"><span className="asm-pct">{pct}% complete</span><span className="asm-count">Question {currentQ + 1} of {total}</span></div>
+          <div className="asm-section-label">{q.section}</div>
+          <h2 className="asm-question">{q.text}</h2>
+          {q.sensitive && (
+            <div className="asm-alert">If you are in crisis right now, please call or text <strong>988</strong> (Suicide and Crisis Lifeline) for immediate support.</div>
+          )}
+          <div className="asm-options">
+            {OPTIONS.map(opt => (
+              <button key={opt.value} className={`asm-option-btn ${selected === opt.value ? 'selected' : ''}`} onClick={() => handleSelect(opt.value)}>
+                <div className="asm-radio">{selected === opt.value && <div className="asm-radio-dot" />}</div>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {errorMsg && <div className="asm-error">{errorMsg}</div>}
+          <div className="asm-footer">
+            <button className="asm-btn-outline" onClick={handleBack}>Back</button>
+            <button className="asm-btn-primary" disabled={selected === null || isSaving} onClick={handleNext}>{isSaving ? 'Saving…' : isLast ? 'See my results' : 'Next'}</button>
+          </div>
         </div>
       </div>
-    </div>
+    </SidebarLayout>
   );
 
   if (screen === 'results' && results) {
     const dotClass = results.level.toLowerCase();
     return (
-      <div className="asm-container">
-        <div className="asm-card results-card">
-          <div className="asm-results-header"><h2 className="asm-title">Your results</h2></div>
-          <div className="asm-risk-box">
-            <div className="asm-risk-label">Calculated risk level</div>
-            <div className="asm-risk-val-row">
-              <span className="asm-risk-val">{results.level}</span>
-              <div className={`asm-risk-dot ${dotClass}`} />
+      <SidebarLayout title="Assessment Results">
+        <div className="asm-container">
+          <div className="asm-card results-card">
+            <div className="asm-results-header"><h2 className="asm-title">Your results</h2></div>
+            <div className="asm-risk-box">
+              <div className="asm-risk-label">Calculated risk level</div>
+              <div className="asm-risk-val-row">
+                <span className="asm-risk-val">{results.level}</span>
+                <div className={`asm-risk-dot ${dotClass}`} />
+              </div>
             </div>
-          </div>
-          <div className="asm-score-wrap">
-            <div className="asm-score-label">Clinical score</div>
-            <div className="asm-score-num">{results.score}</div>
-            <div className="asm-score-max">out of 100</div>
-          </div>
-          <div className="asm-subscores">
-            <div className="asm-sub-card">
-              <div className="asm-sub-label">PHQ-9 Depression</div>
-              <div className="asm-sub-val">{results.phq9}</div>
-              <div className="asm-sub-desc">/ 27 — {phq9Label(results.phq9)}</div>
+            <div className="asm-score-wrap">
+              <div className="asm-score-label">Clinical score</div>
+              <div className="asm-score-num">{results.score}</div>
+              <div className="asm-score-max">out of 100</div>
             </div>
-            <div className="asm-sub-card">
-              <div className="asm-sub-label">GAD-7 Anxiety</div>
-              <div className="asm-sub-val">{results.gad7}</div>
-              <div className="asm-sub-desc">/ 21 — {gad7Label(results.gad7)}</div>
+            <div className="asm-subscores">
+              <div className="asm-sub-card">
+                <div className="asm-sub-label">PHQ-9 Depression</div>
+                <div className="asm-sub-val">{results.phq9}</div>
+                <div className="asm-sub-desc">/ 27 — {phq9Label(results.phq9)}</div>
+              </div>
+              <div className="asm-sub-card">
+                <div className="asm-sub-label">GAD-7 Anxiety</div>
+                <div className="asm-sub-val">{results.gad7}</div>
+                <div className="asm-sub-desc">/ 21 — {gad7Label(results.gad7)}</div>
+              </div>
             </div>
+            <div className="asm-rec-box">
+              <div className="asm-rec-title">What this means for you</div>
+              <p>{RECOMMENDATIONS[results.level]}</p>
+            </div>
+            
+            {isSaving && <div className="asm-saving" style={{ textAlign: 'center', color: 'var(--primary)', marginBottom: '16px' }}>Saving to database...</div>}
+            {saveError && <div className="asm-error">{saveError}</div>}
+            
+            <div className="asm-actions">
+              <button className="asm-btn-primary" onClick={() => navigate('/therapists')}>Find a therapist</button>
+              <button className="asm-btn-outline" onClick={() => navigate('/emergency')}>Emergency Map</button>
+            </div>
+            <button className="asm-btn-text" onClick={() => navigate('/dashboard')}>← Back to dashboard</button>
           </div>
-          <div className="asm-rec-box">
-            <div className="asm-rec-title">What this means for you</div>
-            <p>{RECOMMENDATIONS[results.level]}</p>
-          </div>
-          
-          {isSaving && <div className="asm-saving" style={{ textAlign: 'center', color: 'var(--primary)', marginBottom: '16px' }}>Saving to database...</div>}
-          {saveError && <div className="asm-error">{saveError}</div>}
-          
-          <div className="asm-actions">
-            <button className="asm-btn-primary" onClick={() => navigate('/therapists')}>Find a therapist</button>
-            <button className="asm-btn-outline" onClick={() => navigate('/emergency')}>Emergency Map</button>
-          </div>
-          <button className="asm-btn-text" onClick={() => navigate('/dashboard')}>← Back to dashboard</button>
         </div>
-      </div>
+      </SidebarLayout>
     );
   }
   return null;

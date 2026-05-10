@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SidebarLayout } from '../../core/components/SidebarLayout';
 import './FindTherapist.css';
 
 const SPECIALTIES  = ['All Specialties','Anxiety','Depression','Trauma','PTSD','Stress','CBT','EMDR','Grief'];
@@ -87,125 +88,127 @@ const FindTherapist: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg)' }}>
-        <p style={{ color: 'var(--text-muted)' }}>Loading directory from database...</p>
-      </div>
+      <SidebarLayout title="Directory">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh', background: 'transparent' }}>
+          <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
+        </div>
+      </SidebarLayout>
     );
   }
 
   return (
-    <div className="ft-root">
-      <div className="ft-topbar">
-        <button className="ft-back-btn" onClick={() => navigate('/dashboard')}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-          Back to Dashboard
-        </button>
-      </div>
+    <SidebarLayout title="Directory">
+      <div className="ft-root">
+        
+        {/* The redundant Topbar/Back to Dashboard header has been completely removed! */}
 
-      <div className="ft-body">
-        <h1 className="ft-heading">Directory</h1>
-        <p className="ft-subheading">Find a licensed professional to support your mental health journey.</p>
+        <div className="ft-body">
+          <h1 className="ft-heading">Directory</h1>
+          <p className="ft-subheading">Find a licensed professional to support your mental health journey.</p>
 
-        <div className="ft-filters">
-          <div className="ft-search-wrap">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              value={search}
-              onChange={e => { setSearch(e.target.value); setPage(1); }}
-              placeholder="Search by name or keyword..."
-            />
-          </div>
-
-          <div className="ft-select-wrap">
-            <select value={specialty} onChange={e => { setSpecialty(e.target.value); setPage(1); }}>
-              {SPECIALTIES.map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-
-          <div className="ft-select-wrap">
-            <select value={avail} onChange={e => { setAvail(e.target.value); setPage(1); }}>
-              {AVAILABILITY.map(a => <option key={a}>{a}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div className="ft-count">
-          Showing <strong>{filtered.length} providers</strong> based on your filters.
-        </div>
-
-        {paged.length === 0 ? (
-          <div className="ft-empty">
-            <div className="ft-empty-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <div className="ft-filters">
+            <div className="ft-search-wrap">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
+              <input
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1); }}
+                placeholder="Search by name or keyword..."
+              />
             </div>
-            <p>{therapists.length === 0 ? "No doctors are currently registered in the system." : "We couldn't find any therapists matching those criteria."}</p>
-            {therapists.length > 0 && (
-              <button className="ft-clear-btn" onClick={() => {
-                setSearch(''); setSpecialty('All Specialties'); setAvail('All Availability');
-              }}>Clear Filters</button>
-            )}
-          </div>
-        ) : (
-          <div className="ft-grid">
-            {paged.map(t => {
-              // Extract initials safely
-              const cleanName = (t.name || "Provider").replace('Dr. ', '').trim();
-              const nameParts = cleanName.split(' ');
-              const initials = nameParts.length > 1 
-                ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
-                : cleanName.substring(0, 2).toUpperCase();
-                
-              const specialties = Array.isArray(t.specialties) ? t.specialties : [];
 
-              return (
-                <div key={t.id} className="ft-card" onClick={() => navigate(`/therapists/${t.id}`)}>
-                  <div className="ft-card-top">
-                    <div className="ft-avatar">{initials}</div>
-                    <div className="ft-badges">
-                      {t.available && <span className="ft-badge green">Accepting Patients</span>}
-                      {t.online && <span className="ft-badge purple">Telehealth</span>}
-                    </div>
-                  </div>
+            <div className="ft-select-wrap">
+              <select value={specialty} onChange={e => { setSpecialty(e.target.value); setPage(1); }}>
+                {SPECIALTIES.map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+
+            <div className="ft-select-wrap">
+              <select value={avail} onChange={e => { setAvail(e.target.value); setPage(1); }}>
+                {AVAILABILITY.map(a => <option key={a}>{a}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="ft-count">
+            Showing <strong>{filtered.length} providers</strong> based on your filters.
+          </div>
+
+          {paged.length === 0 ? (
+            <div className="ft-empty">
+              <div className="ft-empty-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+              </div>
+              <p>{therapists.length === 0 ? "No doctors are currently registered in the system." : "We couldn't find any therapists matching those criteria."}</p>
+              {therapists.length > 0 && (
+                <button className="ft-clear-btn" onClick={() => {
+                  setSearch(''); setSpecialty('All Specialties'); setAvail('All Availability');
+                }}>Clear Filters</button>
+              )}
+            </div>
+          ) : (
+            <div className="ft-grid">
+              {paged.map(t => {
+                // Extract initials safely
+                const cleanName = (t.name || "Provider").replace('Dr. ', '').trim();
+                const nameParts = cleanName.split(' ');
+                const initials = nameParts.length > 1 
+                  ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+                  : cleanName.substring(0, 2).toUpperCase();
                   
-                  <div className="ft-card-body">
-                    <h2 className="ft-card-name">{t.name}</h2>
-                    <p className="ft-card-title">{t.title || "Licensed Professional"} • {t.experience || "Verified"}</p>
-                    <Stars rating={t.rating || 5.0} reviews={t.reviews || 0} />
+                const specialties = Array.isArray(t.specialties) ? t.specialties : [];
+
+                return (
+                  <div key={t.id} className="ft-card" onClick={() => navigate(`/therapists/${t.id}`)}>
+                    <div className="ft-card-top">
+                      <div className="ft-avatar">
+                         {t.profilePictureUrl ? (
+                             <img src={t.profilePictureUrl} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                         ) : initials}
+                      </div>
+                      <div className="ft-badges">
+                        {t.available && <span className="ft-badge green">Accepting Patients</span>}
+                        {t.online && <span className="ft-badge purple">Telehealth</span>}
+                      </div>
+                    </div>
                     
-                    <div className="ft-tags">
-                      {specialties.slice(0,3).map((s: string) => <span key={s} className="ft-tag">{s}</span>)}
-                      {specialties.length > 3 && <span className="ft-tag-more">+{specialties.length - 3}</span>}
+                    <div className="ft-card-body">
+                      <h2 className="ft-card-name">{t.name}</h2>
+                      <p className="ft-card-title">{t.title || "Licensed Professional"} • {t.experience || "Verified"}</p>
+                      <Stars rating={t.rating || 5.0} reviews={t.reviews || 0} />
+                      
+                      <div className="ft-tags">
+                        {specialties.slice(0,3).map((s: string) => <span key={s} className="ft-tag">{s}</span>)}
+                        {specialties.length > 3 && <span className="ft-tag-more">+{specialties.length - 3}</span>}
+                      </div>
+                    </div>
+
+                    <div className="ft-card-footer">
+                      <div className="ft-rate">
+                        <span className="rate-val">₱{(t.rate || 1500).toLocaleString()}</span>
+                        <span className="rate-label">/ session</span>
+                      </div>
+                      <button className="ft-view-btn">View Profile</button>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          )}
 
-                  <div className="ft-card-footer">
-                    <div className="ft-rate">
-                      <span className="rate-val">₱{(t.rate || 1500).toLocaleString()}</span>
-                      <span className="rate-label">/ session</span>
-                    </div>
-                    <button className="ft-view-btn">View Profile</button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {totalPages > 1 && (
-          <div className="ft-pagination">
-            <button className="ft-pag-btn" onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1}>Prev</button>
-            <span className="ft-pag-info">Page {page} of {totalPages}</span>
-            <button className="ft-pag-btn" onClick={() => setPage(p => Math.min(totalPages,p+1))} disabled={page===totalPages}>Next</button>
-          </div>
-        )}
+          {totalPages > 1 && (
+            <div className="ft-pagination">
+              <button className="ft-pag-btn" onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1}>Prev</button>
+              <span className="ft-pag-info">Page {page} of {totalPages}</span>
+              <button className="ft-pag-btn" onClick={() => setPage(p => Math.min(totalPages,p+1))} disabled={page===totalPages}>Next</button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </SidebarLayout>
   );
 };
 

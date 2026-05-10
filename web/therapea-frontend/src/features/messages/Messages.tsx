@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SidebarLayout } from '../../core/components/SidebarLayout'
+import { SidebarLayout } from '../../core/components/SidebarLayout';
 import './Messages.css';
 
 interface UserData {
@@ -34,6 +34,9 @@ const Messages: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Track which contacts have unread messages
+  const [unreadMap, setUnreadMap] = useState<Record<string, boolean>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -73,7 +76,6 @@ const Messages: React.FC = () => {
           if (data.success) {
             const uniqueDocs = new Map();
             data.appointments.forEach((apt: any) => {
-              // Use providerEmail as the unique key instead of providerName
               if (apt.providerEmail && !uniqueDocs.has(apt.providerEmail)) {
                 uniqueDocs.set(apt.providerEmail, {
                   email: apt.providerEmail, 
@@ -93,26 +95,59 @@ const Messages: React.FC = () => {
     init();
   }, [navigate]);
 
-  // 2. Real-Time Fetching (3-second Polling)
+  // 2. Real-Time Fetching for Active Chat & Updating Read Status
   useEffect(() => {
-    if (!user || !selectedContact || !selectedContact.email) return;
+    if (!user || contacts.length === 0) return;
 
-    const fetchMessages = async () => {
-      try {
-        const res = await fetch(`http://localhost:8083/api/messages?user1=${encodeURIComponent(user.email)}&user2=${encodeURIComponent(selectedContact.email)}`);
-        const data = await res.json();
-        if (data.success) {
-          setMessages(data.messages);
+    const pollData = async () => {
+      const newUnreadMap: Record<string, boolean> = {};
+      let currentChatMessages: Message[] = [];
+
+      await Promise.all(contacts.map(async (contact) => {
+        if (!contact.email) return;
+        try {
+          const res = await fetch(`http://localhost:8083/api/messages?user1=${encodeURIComponent(user.email)}&user2=${encodeURIComponent(contact.email)}`);
+          const data = await res.json();
+          
+          if (data.success && data.messages.length > 0) {
+            const msgs = data.messages;
+            const lastMsg = msgs[msgs.length - 1];
+
+            // If we are actively chatting with this contact, log it as read automatically
+            if (selectedContact?.email === contact.email) {
+              currentChatMessages = msgs;
+              localStorage.setItem(`last_read_${contact.email}`, new Date().toISOString());
+              newUnreadMap[contact.email] = false;
+            } 
+            // If the last message is from them and we aren't viewing it, check read status
+            else if (lastMsg.senderEmail === contact.email) {
+              const lastRead = localStorage.getItem(`last_read_${contact.email}`);
+              if (!lastRead || new Date(lastMsg.timestamp || Date.now()) > new Date(lastRead)) {
+                newUnreadMap[contact.email] = true;
+              } else {
+                newUnreadMap[contact.email] = false;
+              }
+            }
+          }
+        } catch (err) {
+          // Silent catch to prevent console flooding
         }
-      } catch (err) {
-        console.error("Failed to fetch messages:", err);
+      }));
+
+      if (selectedContact) {
+        setMessages(currentChatMessages);
       }
+
+      setUnreadMap(prev => {
+        const changed = JSON.stringify(prev) !== JSON.stringify(newUnreadMap);
+        return changed ? newUnreadMap : prev;
+      });
     };
 
-    fetchMessages();
-    const intervalId = setInterval(fetchMessages, 3000);
+    pollData(); // initial fetch
+    const intervalId = setInterval(pollData, 3000);
     return () => clearInterval(intervalId);
-  }, [user, selectedContact]);
+  }, [user, contacts, selectedContact]);
 
   // 3. Send Message
   const handleSend = async () => {
@@ -135,6 +170,9 @@ const Messages: React.FC = () => {
     setMessages(prev => [...prev, uiMessage]);
     setNewMessage('');
     setIsSending(true);
+    
+    // Auto-mark as read since we just sent a message
+    localStorage.setItem(`last_read_${selectedContact.email}`, new Date().toISOString());
 
     try {
       const res = await fetch('http://localhost:8083/api/messages/send', {
@@ -148,6 +186,17 @@ const Messages: React.FC = () => {
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleContactClick = (contact: Contact) => {
+    if (!contact.email) return;
+    
+    // Set as active
+    setSelectedContact(contact);
+    
+    // Mark as read immediately when clicked to remove the bold text and red dot
+    localStorage.setItem(`last_read_${contact.email}`, new Date().toISOString());
+    setUnreadMap(prev => ({ ...prev, [contact.email]: false }));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -182,33 +231,47 @@ const Messages: React.FC = () => {
                 No active contacts found.
               </div>
             ) : (
-              filteredContacts.map((contact, idx) => (
-                <div 
-                  key={contact.email || idx} 
-                  className={`msg-contact ${selectedContact?.email === contact.email ? 'active' : ''} ${!contact.email ? 'disabled' : ''}`}
-                  onClick={() => contact.email && setSelectedContact(contact)}
-                  style={{ opacity: contact.email ? 1 : 0.6, cursor: contact.email ? 'pointer' : 'not-allowed' }}
-                >
-                  <div className="msg-avatar" style={{ overflow: 'hidden', padding: 0 }}>
-                    {contact.profilePictureUrl ? (
-                      <img src={contact.profilePictureUrl} alt={contact.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      getInitials(contact.name)
-                    )}
-                  </div>
+              filteredContacts.map((contact, idx) => {
+                const isUnread = unreadMap[contact.email];
 
-                  <div className="msg-info">
-                    <div className="msg-name-time">
-                      <h4 style={{ margin: 0 }}>{contact.name}</h4>
+                return (
+                  <div 
+                    key={contact.email || idx} 
+                    className={`msg-contact ${selectedContact?.email === contact.email ? 'active' : ''} ${!contact.email ? 'disabled' : ''}`}
+                    onClick={() => handleContactClick(contact)}
+                    style={{ opacity: contact.email ? 1 : 0.6, cursor: contact.email ? 'pointer' : 'not-allowed' }}
+                  >
+                    <div className="msg-avatar" style={{ overflow: 'hidden', padding: 0 }}>
+                      {contact.profilePictureUrl ? (
+                        <img src={contact.profilePictureUrl} alt={contact.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        getInitials(contact.name)
+                      )}
                     </div>
-                    {contact.email ? (
-                       <p style={{ fontSize: '11px', color: '#0A5C36', margin: 0 }}>{contact.email}</p>
-                    ) : (
-                       <p style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '11px', margin: 0 }}>Missing Email in Backend!</p>
-                    )}
+
+                    <div className="msg-info" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <div>
+                        <div className="msg-name-time">
+                          {/* Apply Bold styling if unread */}
+                          <h4 style={{ margin: 0, fontWeight: isUnread ? 800 : 500, color: isUnread ? '#1a1a2e' : 'inherit' }}>
+                            {contact.name}
+                          </h4>
+                        </div>
+                        {contact.email ? (
+                           <p style={{ fontSize: '11px', color: '#0A5C36', margin: 0 }}>{contact.email}</p>
+                        ) : (
+                           <p style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '11px', margin: 0 }}>Missing Email!</p>
+                        )}
+                      </div>
+                      
+                      {/* Red dot indicator for unread messages within the internal list */}
+                      {isUnread && (
+                        <div style={{ width: 10, height: 10, backgroundColor: '#ef4444', borderRadius: '50%' }} />
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

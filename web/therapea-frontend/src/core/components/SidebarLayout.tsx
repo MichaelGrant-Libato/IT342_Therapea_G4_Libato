@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import "../../features/dashboard/Dashboard.css";
 
@@ -15,20 +15,131 @@ const NavIcon = ({ type }: { type: string }) => {
     users:     <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>,
     bell:      <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></>,
     map:       <><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></>,
+    search:    <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
+    clock:     <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>
   };
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths[type]}</svg>;
+};
+
+const timeAgo = (dateStr: string) => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins <= 0 ? 'Just now' : mins + 'm ago'}`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 };
 
 export const SidebarLayout: React.FC<{ children: React.ReactNode; title?: string }> = ({ children, title = "Dashboard" }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
-  // Get user info directly from local storage for the sidebar
   const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
   const user = stored ? JSON.parse(stored) : null;
   const isDoctor = user?.role === 'DOCTOR';
   const initials = user?.fullName?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
+
+  // 🔴 NEW: GLOBAL THEME INITIALIZER 🔴
+  // Every time a page loads, this ensures Dark Theme is applied if saved in settings.
+  useEffect(() => {
+    if (user?.email) {
+      const savedSettings = localStorage.getItem(`settings_${user.email}`);
+      if (savedSettings) {
+        const { theme } = JSON.parse(savedSettings);
+        if (theme === 'Dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+      }
+    }
+  }, [user?.email]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+        setShowNotifs(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const pollGlobalData = async () => {
+      try {
+        let contacts: { email: string }[] = [];
+        const contactRes = isDoctor 
+          ? await fetch(`http://localhost:8083/api/patients/doctor?email=${encodeURIComponent(user.email)}`)
+          : await fetch(`http://localhost:8083/api/appointments/user?email=${encodeURIComponent(user.email)}`);
+        
+        if (contactRes.ok) {
+          const data = await contactRes.json();
+          if (isDoctor && data.success) contacts = data.patients;
+          else if (!isDoctor && data.success) {
+            const uniqueDocs = new Set<string>();
+            data.appointments.forEach((apt: any) => { if (apt.providerEmail) uniqueDocs.add(apt.providerEmail); });
+            contacts = Array.from(uniqueDocs).map(email => ({ email }));
+          }
+        }
+
+        let globalUnreadMsg = false;
+        await Promise.all(contacts.map(async (contact) => {
+          if (!contact.email) return;
+          const msgRes = await fetch(`http://localhost:8083/api/messages?user1=${encodeURIComponent(user.email)}&user2=${encodeURIComponent(contact.email)}`);
+          if (msgRes.ok) {
+            const data = await msgRes.json();
+            if (data.success && data.messages.length > 0) {
+              const lastMsg = data.messages[data.messages.length - 1];
+              if (lastMsg.senderEmail === contact.email) {
+                const lastRead = localStorage.getItem(`last_read_${contact.email}`);
+                if (!lastRead || new Date(lastMsg.timestamp) > new Date(lastRead)) globalUnreadMsg = true;
+              }
+            }
+          }
+        }));
+        setHasUnreadMessages(globalUnreadMsg);
+
+        const notifRes = await fetch(`http://localhost:8083/api/notifications?email=${encodeURIComponent(user.email)}`);
+        if (notifRes.status === 403) {
+            setNotifications([]);
+            return;
+        }
+        if (notifRes.ok) {
+          const notifData = await notifRes.json();
+          if (notifData.success) setNotifications(notifData.notifications || []);
+        }
+      } catch (error) {}
+    };
+
+    pollGlobalData();
+    const intervalId = setInterval(pollGlobalData, 8000); 
+    return () => clearInterval(intervalId);
+  }, [user?.email, user?.role, isDoctor]);
+
+  const unreadNotifsCount = notifications.filter(n => !n.read).length;
+
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      const res = await fetch(`http://localhost:8083/api/notifications/${id}/read`, { method: 'PATCH' });
+      if (res.ok) setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    } catch (err) { console.error(err); }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const res = await fetch(`http://localhost:8083/api/notifications/read-all?email=${encodeURIComponent(user.email)}`, { method: 'PATCH' });
+      if (res.ok) setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (err) { console.error(err); }
+  };
 
   const getActiveId = (pathname: string) => {
     if (pathname.startsWith('/appointments')) return 'appointments';
@@ -50,6 +161,8 @@ export const SidebarLayout: React.FC<{ children: React.ReactNode; title?: string
       localStorage.removeItem(k);
       sessionStorage.removeItem(k);
     });
+    // Remove dark theme on logout
+    document.documentElement.removeAttribute('data-theme');
     navigate('/login', { replace: true });
   };
 
@@ -83,7 +196,11 @@ export const SidebarLayout: React.FC<{ children: React.ReactNode; title?: string
           <nav className="db-nav">
             {navItems.map(item => (
               <button key={item.id} className={`db-nav-btn${activeNav === item.id ? ' active' : ''}`} onClick={() => navigate(item.path)}>
-                <span className="db-nav-icon-wrap"><NavIcon type={item.icon} /></span>{item.label}
+                <span className="db-nav-icon-wrap"><NavIcon type={item.icon} /></span>
+                {item.label}
+                {item.id === 'messages' && hasUnreadMessages && (
+                  <span style={{ width: 8, height: 8, backgroundColor: '#ef4444', borderRadius: '50%', marginLeft: 'auto', marginRight: '14px' }} />
+                )}
                 {activeNav === item.id && <span className="db-nav-indicator" />}
               </button>
             ))}
@@ -110,33 +227,77 @@ export const SidebarLayout: React.FC<{ children: React.ReactNode; title?: string
           <header className="db-topbar">
             <div className="db-topbar-left"><span className="db-topbar-title">{title}</span></div>
             <div className="db-topbar-right">
-              <button className="db-bell"><NavIcon type="bell" /><span className="db-bell-dot" /></button>
               
-              {/* 🔴 NEW: Topbar Dynamic Avatar Logic */}
+              <div className="db-notif-wrapper" ref={notifRef}>
+                <button className="db-bell" onClick={() => setShowNotifs(!showNotifs)}>
+                  <NavIcon type="bell" />
+                  {unreadNotifsCount > 0 && <span className="db-bell-badge">{unreadNotifsCount}</span>}
+                </button>
+                
+                {showNotifs && (
+                  <div className="db-notif-dropdown">
+                    <div className="db-notif-header">
+                      {/* 🔴 FIXED: Using var(--text-main) so it adapts to dark mode automatically */}
+                      <h3 style={{ margin: 0, fontSize: '15px', color: 'var(--text-main)' }}>Notifications</h3>
+                      {unreadNotifsCount > 0 && (
+                        <button onClick={handleMarkAllAsRead} className="db-notif-read-all">Mark all as read</button>
+                      )}
+                    </div>
+                    <div className="db-notif-body">
+                      {notifications.length === 0 ? (
+                        <div className="db-notif-empty" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 20px', textAlign: 'center' }}>
+                          <div style={{ width: '48px', height: '48px', background: 'var(--bg)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                            </svg>
+                          </div>
+                          <p style={{ margin: 0, color: 'var(--text-sub)', fontSize: '15px', fontWeight: 500 }}>You're all caught up!</p>
+                          <span style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>No new notifications</span>
+                        </div>
+                      ) : (
+                        notifications.map(notif => (
+                          <div 
+                            key={notif.id} 
+                            className={`db-notif-item ${!notif.read ? 'unread' : ''}`}
+                            onClick={() => {
+                               handleMarkAsRead(notif.id);
+                               navigate('/appointments'); 
+                               setShowNotifs(false);
+                            }}
+                          >
+                            <div className="db-notif-icon">
+                              <NavIcon type={notif.type === 'BOOKING' ? 'calendar' : 'clock'} />
+                            </div>
+                            <div className="db-notif-content">
+                              <h4 className="db-notif-title">{notif.title}</h4>
+                              <p className="db-notif-msg">{notif.message}</p>
+                              <span className="db-notif-time">{timeAgo(notif.createdAt)}</span>
+                            </div>
+                            {!notif.read && <div className="db-notif-dot" />}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
               <div 
                 className={`db-avatar${isDoctor ? ' doctor' : ''}`} 
                 onClick={() => navigate('/profile')}
                 style={user?.profilePictureUrl ? { padding: 0, overflow: 'hidden' } : {}}
               >
                 {user?.profilePictureUrl ? (
-                  <img 
-                    src={user.profilePictureUrl} 
-                    alt="Profile" 
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
-                  />
-                ) : (
-                  initials
-                )}
+                  <img src={user.profilePictureUrl} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                ) : initials}
               </div>
 
             </div>
           </header>
 
-          {/* THIS IS WHERE THE UNIQUE PAGE CONTENT GOES! */}
           <div className="db-content">
             {children}
           </div>
-          
         </div>
       </div>
 

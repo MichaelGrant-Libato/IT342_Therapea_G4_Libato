@@ -36,7 +36,6 @@ public class OTPService {
         otpStore.put(email, new OTPData(otp, expiryTime));
     }
 
-    // ✅ Accepts a 'type' to change the email text
     public void generateAndSendOtp(String email, String type) {
         String otp = generateOTP();
         storeOTP(email, otp);
@@ -44,20 +43,23 @@ public class OTPService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
 
-        if ("LOGIN".equalsIgnoreCase(type)) {
+        if ("FORGOT_PASSWORD".equalsIgnoreCase(type)) {
+            message.setSubject("Reset Your TheraPea Password");
+            message.setText("Hello,\n\n" +
+                    "We received a request to reset the password for your TheraPea account. " +
+                    "Your verification code is:\n\n" +
+                    otp + "\n\n" +
+                    "If you did not request this, please ignore this email.");
+        } else if ("LOGIN".equalsIgnoreCase(type)) {
             message.setSubject("Sign in to TheraPea");
             message.setText("Welcome back to TheraPea!\n\n" +
-                    "To securely sign in to your account, please enter the following 6-digit code:\n\n" +
-                    otp + "\n\n" +
-                    "This code will expire in 10 minutes.\n\n" +
-                    "If you did not request this, please secure your account immediately.");
+                    "To securely sign in, please enter the following 6-digit code:\n\n" +
+                    otp);
         } else {
             message.setSubject("Verify your TheraPea Account");
             message.setText("Welcome to TheraPea!\n\n" +
-                    "To verify your email address and finish creating your account, please enter the following 6-digit code:\n\n" +
-                    otp + "\n\n" +
-                    "This code will expire in 10 minutes.\n\n" +
-                    "If you did not request this, please ignore this email.");
+                    "To verify your email address, please enter the following 6-digit code:\n\n" +
+                    otp);
         }
 
         mailSender.send(message);

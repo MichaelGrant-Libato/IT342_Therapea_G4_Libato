@@ -1,51 +1,78 @@
-@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+/* ── 1. GUARANTEE HIGH-SPECIFICITY DARK VARIABLES ── */
+:root[data-theme="dark"] {
+  --primary:       #8ab887;   
+  --primary-light: #253324;
+  --primary-dark:  #a3cfa0;
+  
+  --bg:            #121412; 
+  --surface:       #1e231f; 
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --primary:       #7A9E78;   
-  --primary-light: #EEF4EE;
-  --primary-dark:  #527050;
-  --secondary:       #9B7FD4; 
-  --secondary-light: #F0EBFB;
-  --amber:       #D97706;
-  --amber-light: #FFFBEB;
-  --teal:        #0D9488;
-  --teal-light:  #F0FDFA;
-  --alert-bg:     #FEE2E2;
-  --alert-text:   #991B1B;
-  --alert-border: #FECACA;
-  --bg:            #F5F6F2;   
-  --bg-alt:        #EEEEE9;
-  --surface:       #FFFFFF;
-  --text-main:     #1C1F1A;
-  --text-sub:      #4A5047;
+  --text-main:     #F0F2F0;
+  --text-sub:      #A3A8A2;
   --text-muted:    #7A8077;
-  --border:        #E4E6DF;
-  --border-subtle: #ECEEE8;
-  --radius-sm:  10px;
-  --radius-md:  16px;
-  --radius-lg:  20px;
-  --radius-xl:  28px;
-  --radius-pill: 9999px;
-  --shadow-xs:  0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
-  --shadow-sm:  0 2px 8px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.04);
-  --shadow-md:  0 4px 16px rgba(0,0,0,0.07), 0 2px 6px rgba(0,0,0,0.04);
-  --shadow-lg:  0 8px 32px rgba(0,0,0,0.09), 0 4px 12px rgba(0,0,0,0.05);
+  --border:        #363b35;
+  --border-subtle: #2b2f2a;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* ── 2. AGGRESSIVELY FORCE BACKGROUNDS AND TEXT TO GO DARK ── */
+[data-theme="dark"] body,
+[data-theme="dark"] .db-root,
+[data-theme="dark"] .db-main,
+[data-theme="dark"] .settings-layout,
+[data-theme="dark"] .em-root {
+  background-color: var(--bg) !important;
+  color: var(--text-main) !important;
 }
 
-body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text-main);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+/* Force sidebars and cards to use the dark surface color */
+[data-theme="dark"] .db-sidebar,
+[data-theme="dark"] .db-topbar,
+[data-theme="dark"] .settings-sidebar,
+[data-theme="dark"] .settings-card,
+[data-theme="dark"] .em-sidebar {
+  background-color: var(--surface) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+/* Force Text Colors */
+[data-theme="dark"] h1, 
+[data-theme="dark"] h2, 
+[data-theme="dark"] h3, 
+[data-theme="dark"] h4,
+[data-theme="dark"] .settings-title {
+  color: var(--text-main) !important;
+}
+
+[data-theme="dark"] p, 
+[data-theme="dark"] label,
+[data-theme="dark"] .settings-subtitle,
+[data-theme="dark"] .db-nav-btn {
+  color: var(--text-sub) !important;
+}
+
+/* Force Inputs & Dropdowns to be dark */
+[data-theme="dark"] input,
+[data-theme="dark"] select {
+  background-color: var(--bg) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border) !important;
+}
+
+/* Fix Sidebar active buttons */
+[data-theme="dark"] .db-nav-btn:hover {
+  background-color: var(--border-subtle) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="dark"] .db-nav-btn.active {
+  background-color: var(--primary-light) !important;
+  color: var(--primary) !important;
+}
+
+/* Leaflet Map Dark Mode Invert */
+[data-theme="dark"] .leaflet-layer,
+[data-theme="dark"] .leaflet-control-zoom-in,
+[data-theme="dark"] .leaflet-control-zoom-out,
+[data-theme="dark"] .leaflet-control-attribution {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }

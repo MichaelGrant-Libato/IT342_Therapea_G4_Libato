@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collections;
 import java.util.Map;
@@ -36,12 +37,12 @@ public class AuthController {
     @Autowired
     private OTPService otpService;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     private final Dotenv dotenv = Dotenv.load();
     private final String GOOGLE_CLIENT_ID = dotenv.get("GOOGLE_CLIENT_ID");
 
-    // ==========================================
-    // OTP SERVICES (USED FOR GOOGLE FLOW)
-    // ==========================================
     @PostMapping("/send-otp")
     public ResponseEntity<?> sendOtp(@RequestBody Map<String, String> request) {
         String email = request.get("email");
@@ -60,14 +61,30 @@ public class AuthController {
                 }
             }
 
-            if ("LOGIN".equalsIgnoreCase(type) && existingUser == null) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Account not found. Please register first."));
+            if (("LOGIN".equalsIgnoreCase(type) || "FORGOT_PASSWORD".equalsIgnoreCase(type)) && existingUser == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Account not found. Please check the email or register."));
+            }
+
+            // 🔴 THE FIX: Properly identify Google Accounts by checking for the hashed empty string
+            if ("FORGOT_PASSWORD".equalsIgnoreCase(type) && existingUser != null) {
+                boolean isGoogleAccount = existingUser.getPassword() == null ||
+                        existingUser.getPassword().isEmpty() ||
+                        passwordEncoder.matches("", existingUser.getPassword());
+
+                if (isGoogleAccount) {
+                    // Google Account: Sends REAL OTP email to Gmail
+                    otpService.generateAndSendOtp(email, type);
+                    return ResponseEntity.ok(Map.of("success", true, "requiresOtp", true, "message", "Verification code sent to your email."));
+                } else {
+                    // Regular Account: Skip OTP completely
+                    return ResponseEntity.ok(Map.of("success", true, "requiresOtp", false, "message", "Proceeding to password reset"));
+                }
             }
 
             otpService.generateAndSendOtp(email, type);
-            return ResponseEntity.ok(Map.of("success", true, "message", "OTP sent successfully"));
+            return ResponseEntity.ok(Map.of("success", true, "requiresOtp", true, "message", "Verification code sent."));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to send verification email."));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to process request."));
         }
     }
 
@@ -89,10 +106,34 @@ public class AuthController {
         }
     }
 
-    // ==========================================
-    // PATIENT REGISTRATION ENDPOINTS
-    // ==========================================
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String newPassword = request.get("newPassword");
 
+        if (email == null || newPassword == null || newPassword.length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid request. Password must be at least 6 characters."));
+        }
+
+        try {
+            UserEntity user = userService.getUserByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Account not found."));
+            }
+
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            otpService.clearVerification(email);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "Password reset successfully."));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to reset password."));
+        }
+    }
+
+    // ==========================================
+    // OTHER ENDPOINTS
+    // ==========================================
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody UserRegistrationDTO registrationDTO) {
         try {
@@ -109,19 +150,13 @@ public class AuthController {
             if (!otpService.isEmailVerified(registrationDTO.getEmail())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Email address has not been verified via OTP."));
             }
-
             UserEntity user = userService.registerUser(registrationDTO);
             otpService.clearVerification(registrationDTO.getEmail());
-
             return ResponseEntity.ok(mapToDTO(user, "Google profile completed!"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
-
-    // ==========================================
-    // DOCTOR REGISTRATION & VERIFICATION (ATOMIC)
-    // ==========================================
 
     @PostMapping("/register-doctor")
     public ResponseEntity<?> registerDoctor(
@@ -135,7 +170,6 @@ public class AuthController {
             if (prcLicense == null || prcLicense.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "PRC License document is required."));
             }
-
             UserEntity existingUser = userService.getUserByEmail(email);
             if (existingUser != null) {
                 if ("REJECTED".equals(existingUser.getStatus())) {
@@ -144,33 +178,25 @@ public class AuthController {
                     return ResponseEntity.badRequest().body(Map.of("error", "Email is already registered."));
                 }
             }
-
             UserRegistrationDTO dto = new UserRegistrationDTO();
             dto.setFullName(fullName);
             dto.setEmail(email);
             dto.setPassword(password);
             dto.setRole("DOCTOR");
-
             UserEntity user = userService.registerUser(dto);
-
             user.setClinicalBio(clinicalBio);
             user.setHourlyRate(Double.parseDouble(hourlyRate));
             user.setStatus("PENDING");
-
-            // ✅ ADDED: Save the actual file bytes and type into the database!
             user.setPrcLicenseData(prcLicense.getBytes());
             user.setPrcLicenseType(prcLicense.getContentType());
-
             String refNumber = "TRK-" + (int)(Math.random() * 900000 + 100000);
             user.setReferenceNumber(refNumber);
-
             userService.saveUser(user);
-
             return ResponseEntity.ok(Map.of("success", true, "referenceNumber", refNumber, "message", "Doctor registered successfully"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred during registration."));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
         }
     }
 
@@ -188,7 +214,6 @@ public class AuthController {
             if (prcLicense == null || prcLicense.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "PRC License document is required."));
             }
-
             UserEntity existingUser = userService.getUserByEmail(email);
             if (existingUser != null) {
                 if ("REJECTED".equals(existingUser.getStatus())) {
@@ -197,44 +222,31 @@ public class AuthController {
                     return ResponseEntity.badRequest().body(Map.of("error", "Email is already registered."));
                 }
             }
-
             UserRegistrationDTO dto = new UserRegistrationDTO();
             dto.setFullName(fullName);
             dto.setEmail(email);
             dto.setPassword("");
             dto.setRole("DOCTOR");
-
             UserEntity user = userService.registerUser(dto);
             otpService.clearVerification(email);
-
             user.setClinicalBio(clinicalBio);
             user.setHourlyRate(Double.parseDouble(hourlyRate));
             user.setStatus("PENDING");
-
-            // ✅ ADDED: Save the actual file bytes and type into the database!
             user.setPrcLicenseData(prcLicense.getBytes());
             user.setPrcLicenseType(prcLicense.getContentType());
-
             String refNumber = "TRK-" + (int)(Math.random() * 900000 + 100000);
             user.setReferenceNumber(refNumber);
-
             userService.saveUser(user);
-
             if (emailNotificationService != null) {
                 emailNotificationService.sendApplicationReceived(email, user.getFullName());
             }
-
             return ResponseEntity.ok(Map.of("success", true, "referenceNumber", refNumber, "message", "Google Doctor registered successfully"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred during registration."));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An unexpected error occurred."));
         }
     }
-
-    // ==========================================
-    // LOGIN & AUTHENTICATION ENDPOINTS
-    // ==========================================
 
     @PostMapping("/google-check")
     public ResponseEntity<?> googleCheck(@RequestBody Map<String, String> request) {
@@ -247,30 +259,16 @@ public class AuthController {
             if (idToken != null) {
                 GoogleIdToken.Payload payload = idToken.getPayload();
                 String email = payload.getEmail();
-
                 UserEntity user = userService.getUserByEmail(email);
                 if (user != null) {
                     if ("DOCTOR".equals(user.getRole())) {
-                        if ("PENDING".equals(user.getStatus())) {
-                            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                                    "error", "Your application is still under review. Please wait for an approval email."));
-                        }
-                        if ("REJECTED".equals(user.getStatus())) {
-                            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                                    "error", "Your application was declined. Reason: " + user.getRejectionReason()));
-                        }
-                        if (user.getIsActive() != null && !user.getIsActive()) {
-                            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                                    "error", "Your account is currently deactivated. Please contact support."));
-                        }
+                        if ("PENDING".equals(user.getStatus())) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Your application is still under review."));
+                        if ("REJECTED".equals(user.getStatus())) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Your application was declined."));
+                        if (user.getIsActive() != null && !user.getIsActive()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Your account is deactivated."));
                     }
                     return ResponseEntity.ok(mapToDTO(user, "Google Login successful"));
                 } else {
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
-                            "email", email,
-                            "fullName", (String) payload.get("name"),
-                            "error", "User not found. Please complete registration."
-                    ));
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("email", email, "fullName", (String) payload.get("name"), "error", "User not found."));
                 }
             }
         } catch (Exception e) {
@@ -282,25 +280,32 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginDTO loginDTO) {
         try {
-            UserEntity user = userService.loginUser(loginDTO);
+            UserEntity checkUser = userService.getUserByEmail(loginDTO.getEmail());
 
-            if ("DOCTOR".equals(user.getRole())) {
-                if ("PENDING".equals(user.getStatus())) {
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                            "error", "Your application is still under review. Please wait for an approval email."));
-                }
-                if ("REJECTED".equals(user.getStatus())) {
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                            "error", "Your application was declined. Reason: " + user.getRejectionReason()));
-                }
-                if (user.getIsActive() != null && !user.getIsActive()) {
-                    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
-                            "error", "Your account is currently deactivated. Please contact support."));
+            if (checkUser != null) {
+                // 🔴 THE FIX AGAIN: Intercept Google Accounts logging in through manual form
+                boolean isGoogleAccount = checkUser.getPassword() == null ||
+                        checkUser.getPassword().isEmpty() ||
+                        passwordEncoder.matches("", checkUser.getPassword());
+
+                if (isGoogleAccount) {
+                    otpService.generateAndSendOtp(checkUser.getEmail(), "LOGIN");
+                    return ResponseEntity.ok(Map.of(
+                            "requiresOtp", true,
+                            "email", checkUser.getEmail(),
+                            "message", "Google account detected. We've sent a secure code to your email."
+                    ));
                 }
             }
 
-            DashboardDTO response = mapToDTO(user, "Login successful");
-            return ResponseEntity.ok(response);
+            UserEntity user = userService.loginUser(loginDTO);
+
+            if ("DOCTOR".equals(user.getRole())) {
+                if ("PENDING".equals(user.getStatus())) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Your application is still under review."));
+                if ("REJECTED".equals(user.getStatus())) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Your application was declined."));
+                if (user.getIsActive() != null && !user.getIsActive()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Your account is deactivated."));
+            }
+            return ResponseEntity.ok(mapToDTO(user, "Login successful"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         }
@@ -308,9 +313,7 @@ public class AuthController {
 
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(@RequestParam String email) {
-        if (email == null || email.isBlank()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Email is required"));
-        }
+        if (email == null || email.isBlank()) return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Email is required"));
         try {
             UserEntity user = userService.findByEmail(email);
             return ResponseEntity.ok(mapToDTO(user, "User found"));
@@ -324,15 +327,12 @@ public class AuthController {
         try {
             UserEntity user = userService.getUserByEmail(email);
             if (user != null && referenceNumber.equals(user.getReferenceNumber())) {
-                return ResponseEntity.ok(Map.of(
-                        "status", user.getStatus() != null ? user.getStatus() : "PENDING",
-                        "message", user.getRejectionReason() != null ? user.getRejectionReason() : ""
-                ));
+                return ResponseEntity.ok(Map.of("status", user.getStatus() != null ? user.getStatus() : "PENDING", "message", user.getRejectionReason() != null ? user.getRejectionReason() : ""));
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "No application found with these details."));
             }
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An error occurred while checking status."));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An error occurred."));
         }
     }
 

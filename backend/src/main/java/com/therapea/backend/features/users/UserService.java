@@ -1,3 +1,4 @@
+// UserService.java
 package com.therapea.backend.features.users;
 
 import com.therapea.backend.features.auth.LoginDTO;
@@ -21,7 +22,6 @@ public class UserService {
             throw new RuntimeException("Email is already in use.");
         }
 
-        // 👇 ADD THESE THREE LINES 👇
         System.out.println("====== REGISTRATION RECEIVED ======");
         System.out.println("👉 Raw Password from React: [" + dto.getPassword() + "]");
         System.out.println("👉 Generated Hash: [" + passwordEncoder.encode(dto.getPassword()) + "]");
@@ -34,13 +34,10 @@ public class UserService {
         return userRepository.save(user);
     }
 
-
-
     public UserEntity loginUser(LoginDTO dto) {
         UserEntity user = userRepository.findByEmail(dto.getEmail())
                 .orElseThrow(() -> new RuntimeException("Invalid email or password."));
 
-        // 3. Throw the SAME generic error if they are a Google OAuth user
         if (user.getPassword() == null || user.getPassword().isBlank()) {
             throw new RuntimeException("Please log in using Google.");
         }
@@ -64,24 +61,18 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
     }
 
-    /**
-     * Get user by email without throwing exception - returns null if not found
-     */
     public UserEntity getUserByEmail(String email) {
         return userRepository.findByEmail(email).orElse(null);
     }
-
 
     public void changePassword(String email, String oldPassword, String newPassword) {
         UserEntity user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found."));
 
-        // 1. Verify the old password matches the database
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
             throw new RuntimeException("Incorrect current password.");
         }
 
-        // 2. Encrypt the new password and save it
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
     }
@@ -90,4 +81,19 @@ public class UserService {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
     }
+
+    public UserEntity updateUserProfile(String email, UserRegistrationDTO dto) {
+        UserEntity user = findByEmail(email);
+
+        if (dto.getFullName() != null) user.setFullName(dto.getFullName());
+        if (dto.getAvailableSchedule() != null) user.setAvailableSchedule(dto.getAvailableSchedule());
+        if (dto.getWhatToExpect() != null) user.setWhatToExpect(dto.getWhatToExpect());
+
+        if (dto.getProfileCompleted() != null) user.setProfileCompleted(dto.getProfileCompleted());
+
+        if (dto.getProfilePictureUrl() != null) user.setProfilePictureUrl(dto.getProfilePictureUrl());
+
+        return userRepository.save(user);
+    }
+
 }

@@ -31,15 +31,14 @@ public class DoctorController {
                 map.put("id", doc.getId().toString());
                 map.put("name", "Dr. " + doc.getFullName());
                 map.put("email", doc.getEmail());
-
-                // 🔴 ADDED THIS LINE: Now React gets the Supabase image link!
                 map.put("profilePictureUrl", doc.getProfilePictureUrl());
 
-                // USE REAL DATA IF IT EXISTS
+                map.put("availableSchedule", doc.getAvailableSchedule());
+                map.put("whatToExpect", doc.getWhatToExpect());
+
                 map.put("rate", doc.getHourlyRate() != null ? doc.getHourlyRate() : 1500.0);
                 map.put("bio", doc.getClinicalBio() != null ? doc.getClinicalBio() : "I am a dedicated mental health professional.");
 
-                // Keep placeholders for things you aren't capturing in registration yet
                 map.put("title", "Licensed Professional");
                 map.put("rating", 5.0);
                 map.put("reviews", 0);

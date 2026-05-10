@@ -1,27 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SidebarLayout } from '../../core/components/SidebarLayout'
+import { SidebarLayout } from '../../core/components/SidebarLayout';
 import './Settings.css';
 
 const Settings: React.FC = () => {
   const navigate = useNavigate();
   const [userEmail, setUserEmail] = useState('');
   
-  // Navigation State
-  const [activeTab, setActiveTab] = useState<'security' | 'notifications' | 'preferences'>('security');
-
-  // Password Form State
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  
-  // UI State
-  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'notifications' | 'preferences'>('preferences');
+  const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
-  // Mock states for UI demonstration
-  const [emailAlerts, setEmailAlerts] = useState(true);
-  const [smsAlerts, setSmsAlerts] = useState(false);
+  const [settings, setSettings] = useState({
+    emailAlerts: true,
+    smsAlerts: false,
+    marketingEmails: false,
+    language: 'English (US)',
+    timezone: 'Asia/Manila (PHT)',
+    theme: 'Light'
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
@@ -31,44 +28,37 @@ const Settings: React.FC = () => {
     }
     const parsed = JSON.parse(stored);
     setUserEmail(parsed.email);
+
+    // Load settings from local storage
+    const savedSettings = localStorage.getItem(`settings_${parsed.email}`);
+    if (savedSettings) {
+      setSettings(JSON.parse(savedSettings));
+    }
   }, [navigate]);
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
     setMessage({ text: '', type: '' });
 
-    if (newPassword !== confirmPassword) {
-      setMessage({ text: "New passwords do not match.", type: "error" });
-      return;
-    }
-
-    setIsLoading(true);
-
     try {
-      const res = await fetch('http://localhost:8083/api/users/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userEmail,
-          oldPassword: oldPassword,
-          newPassword: newPassword
-        })
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        setMessage({ text: "Password updated successfully!", type: "success" });
-        setOldPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+      // 1. Save to local storage
+      localStorage.setItem(`settings_${userEmail}`, JSON.stringify(settings));
+      
+      // 2. 🔴 IMMEDIATELY APPLY THEME TO THE ENTIRE APP 🔴
+      if (settings.theme === 'Dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
       } else {
-        setMessage({ text: data.message || "Failed to update password.", type: "error" });
+        document.documentElement.removeAttribute('data-theme');
       }
+
+      // 3. Fake API Delay
+      setTimeout(() => {
+        setMessage({ text: "Settings saved successfully!", type: "success" });
+        setIsSaving(false);
+      }, 800);
     } catch (err) {
-      setMessage({ text: "Server error. Please try again later.", type: "error" });
-    } finally {
-      setIsLoading(false);
+      setMessage({ text: "Failed to save settings.", type: "error" });
+      setIsSaving(false);
     }
   };
 
@@ -78,20 +68,11 @@ const Settings: React.FC = () => {
         
         <div className="settings-header-section">
           <h1 className="settings-title">Account Settings</h1>
-          <p className="settings-subtitle">Manage your security and application preferences.</p>
+          <p className="settings-subtitle">Manage your notification alerts and application preferences.</p>
         </div>
 
         <div className="settings-grid">
-          
-          {/* Left Navigation Sidebar */}
           <div className="settings-sidebar">
-            <button 
-              className={`settings-tab ${activeTab === 'security' ? 'active' : ''}`}
-              onClick={() => setActiveTab('security')}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              Security & Password
-            </button>
             <button 
               className={`settings-tab ${activeTab === 'notifications' ? 'active' : ''}`}
               onClick={() => setActiveTab('notifications')}
@@ -108,83 +89,27 @@ const Settings: React.FC = () => {
             </button>
           </div>
 
-          {/* Right Content Area */}
           <div className="settings-content">
-            
-            {/* --- SECURITY TAB --- */}
-            {activeTab === 'security' && (
-              <div className="settings-card">
-                <div className="settings-card-header">
-                  <h2>Update Password</h2>
-                  <p>Ensure your account is using a long, random password to stay secure.</p>
-                </div>
-
-                <form onSubmit={handlePasswordChange} className="settings-form-grid">
-                  {message.text && (
-                    <div className={`settings-alert ${message.type}`}>
-                      {message.text}
-                    </div>
-                  )}
-
-                  <div className="settings-form-group">
-                    <label>Current Password</label>
-                    <input 
-                      type="password" 
-                      placeholder="Enter current password" 
-                      value={oldPassword}
-                      onChange={(e) => setOldPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="settings-form-group">
-                    <label>New Password</label>
-                    <input 
-                      type="password" 
-                      placeholder="Create new password (min. 6 characters)" 
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                      minLength={6}
-                    />
-                  </div>
-
-                  <div className="settings-form-group">
-                    <label>Confirm New Password</label>
-                    <input 
-                      type="password" 
-                      placeholder="Confirm new password" 
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      minLength={6}
-                    />
-                  </div>
-
-                  <div className="settings-form-group" style={{ marginTop: '8px' }}>
-                    <button type="submit" className="settings-save-btn" disabled={isLoading}>
-                      {isLoading ? 'Updating...' : 'Update Password'}
-                    </button>
-                  </div>
-                </form>
+            {message.text && (
+              <div className={`settings-alert ${message.type}`} style={{ marginBottom: '20px' }}>
+                {message.text}
               </div>
             )}
 
-            {/* --- NOTIFICATIONS TAB --- */}
             {activeTab === 'notifications' && (
               <div className="settings-card">
                 <div className="settings-card-header">
                   <h2>Notification Preferences</h2>
-                  <p>Choose what alerts you receive and how you get them.</p>
+                  <p>Choose how you want to be alerted about sessions and messages.</p>
                 </div>
 
                 <div className="settings-toggle-row">
                   <div className="settings-toggle-info">
                     <h4>Email Alerts</h4>
-                    <p>Receive appointment updates and messages via email.</p>
+                    <p>Receive appointment confirmations and clinical updates via email.</p>
                   </div>
                   <label className="toggle-switch">
-                    <input type="checkbox" checked={emailAlerts} onChange={(e) => setEmailAlerts(e.target.checked)} />
+                    <input type="checkbox" checked={settings.emailAlerts} onChange={(e) => setSettings({...settings, emailAlerts: e.target.checked})} />
                     <span className="toggle-slider"></span>
                   </label>
                 </div>
@@ -192,32 +117,33 @@ const Settings: React.FC = () => {
                 <div className="settings-toggle-row">
                   <div className="settings-toggle-info">
                     <h4>SMS Text Alerts</h4>
-                    <p>Get a text message 1 hour before an appointment.</p>
+                    <p>Get a direct text message 1 hour before your scheduled session.</p>
                   </div>
                   <label className="toggle-switch">
-                    <input type="checkbox" checked={smsAlerts} onChange={(e) => setSmsAlerts(e.target.checked)} />
+                    <input type="checkbox" checked={settings.smsAlerts} onChange={(e) => setSettings({...settings, smsAlerts: e.target.checked})} />
                     <span className="toggle-slider"></span>
                   </label>
                 </div>
                 
                 <div className="settings-form-group" style={{ marginTop: '24px' }}>
-                  <button className="settings-save-btn">Save Preferences</button>
+                  <button className="settings-save-btn" onClick={handleSaveSettings} disabled={isSaving}>
+                    {isSaving ? 'Saving...' : 'Save Notification Settings'}
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* --- PREFERENCES TAB --- */}
             {activeTab === 'preferences' && (
               <div className="settings-card">
                 <div className="settings-card-header">
                   <h2>Application Preferences</h2>
-                  <p>Customize your TheraPea dashboard experience.</p>
+                  <p>Customize your regional settings and visual theme.</p>
                 </div>
 
                 <div className="settings-form-grid">
                   <div className="settings-form-group">
                     <label>Language</label>
-                    <select>
+                    <select value={settings.language} onChange={(e) => setSettings({...settings, language: e.target.value})}>
                       <option>English (US)</option>
                       <option>Tagalog</option>
                       <option>Cebuano</option>
@@ -226,20 +152,29 @@ const Settings: React.FC = () => {
 
                   <div className="settings-form-group">
                     <label>Timezone</label>
-                    <select>
+                    <select value={settings.timezone} onChange={(e) => setSettings({...settings, timezone: e.target.value})}>
                       <option>Asia/Manila (PHT)</option>
                       <option>America/New_York (EST)</option>
                       <option>Europe/London (GMT)</option>
                     </select>
                   </div>
 
+                  <div className="settings-form-group">
+                    <label>Interface Theme</label>
+                    <select value={settings.theme} onChange={(e) => setSettings({...settings, theme: e.target.value})}>
+                      <option>Light</option>
+                      <option>Dark</option> {/* 🔴 Fixed: Removed coming soon */}
+                    </select>
+                  </div>
+
                   <div className="settings-form-group" style={{ marginTop: '8px' }}>
-                    <button className="settings-save-btn">Save Preferences</button>
+                    <button className="settings-save-btn" onClick={handleSaveSettings} disabled={isSaving}>
+                      {isSaving ? 'Saving...' : 'Save App Preferences'}
+                    </button>
                   </div>
                 </div>
               </div>
             )}
-
           </div>
         </div>
       </div>

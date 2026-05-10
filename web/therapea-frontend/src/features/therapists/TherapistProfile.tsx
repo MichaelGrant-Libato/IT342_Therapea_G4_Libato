@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { SidebarLayout } from '../../core/components/SidebarLayout'
+import { SidebarLayout } from '../../core/components/SidebarLayout';
 import './TherapistProfile.css';
 
 const TherapistProfile: React.FC = () => {
@@ -75,11 +75,25 @@ const TherapistProfile: React.FC = () => {
 
         <div className="tp-profile-grid">
           
-          {/* ── Main Content Column ── */}
           <div className="tp-main-col">
             
             <header className="tp-hero-section">
-              <div className="tp-avatar-lg">{initials}</div>
+              {/* 🔴 FIXED: Added logic to render profilePictureUrl instead of just initials */}
+              <div 
+                className="tp-avatar-lg" 
+                style={therapist.profilePictureUrl ? { padding: 0, overflow: 'hidden', background: 'transparent' } : {}}
+              >
+                {therapist.profilePictureUrl ? (
+                  <img 
+                    src={therapist.profilePictureUrl} 
+                    alt={therapist.name} 
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                  />
+                ) : (
+                  initials
+                )}
+              </div>
+
               <div className="tp-hero-text">
                 <div className="tp-verified-badge">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -113,41 +127,35 @@ const TherapistProfile: React.FC = () => {
 
             <section className="tp-expectation-section">
               <h2 className="tp-section-h">What to Expect in Sessions</h2>
-              <div className="tp-expect-grid">
-                <div className="tp-expect-item">
-                  <div className="tp-expect-icon">🤝</div>
-                  <div className="tp-expect-text">
-                    <strong>A Safe, Non-Judgmental Space</strong>
-                    <p>A welcoming environment to explore your inner thoughts and feelings openly.</p>
+              
+              {therapist.whatToExpect ? (
+                <div style={{ background: 'var(--bg-alt, #F8FAFC)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-subtle, #E2E8F0)' }}>
+                  <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.7, color: 'var(--text-sub, #475569)', margin: 0, fontSize: '15px' }}>
+                    {therapist.whatToExpect}
+                  </p>
+                </div>
+              ) : (
+                <div className="tp-expect-grid">
+                  <div className="tp-expect-item">
+                    <div className="tp-expect-icon">🤝</div>
+                    <div className="tp-expect-text">
+                      <strong>A Safe, Non-Judgmental Space</strong>
+                      <p>A welcoming environment to explore your inner thoughts and feelings openly.</p>
+                    </div>
+                  </div>
+                  <div className="tp-expect-item">
+                    <div className="tp-expect-icon">🧠</div>
+                    <div className="tp-expect-text">
+                      <strong>Evidence-Based Techniques</strong>
+                      <p>Utilizing proven methodologies tailored specifically to your unique needs.</p>
+                    </div>
                   </div>
                 </div>
-                <div className="tp-expect-item">
-                  <div className="tp-expect-icon">🧠</div>
-                  <div className="tp-expect-text">
-                    <strong>Evidence-Based Techniques</strong>
-                    <p>Utilizing proven methodologies tailored specifically to your unique needs.</p>
-                  </div>
-                </div>
-                <div className="tp-expect-item">
-                  <div className="tp-expect-icon">🎯</div>
-                  <div className="tp-expect-text">
-                    <strong>Collaborative Goal Setting</strong>
-                    <p>Working together to set realistic milestones and tracking your progress over time.</p>
-                  </div>
-                </div>
-                <div className="tp-expect-item">
-                  <div className="tp-expect-icon">🔒</div>
-                  <div className="tp-expect-text">
-                    <strong>Strict Confidentiality</strong>
-                    <p>Your privacy and the security of your sessions are our utmost priority.</p>
-                  </div>
-                </div>
-              </div>
+              )}
             </section>
 
           </div>
 
-          {/* ── Sidebar Action Column ── */}
           <aside className="tp-side-col">
             <div className="tp-booking-card">
               
@@ -160,13 +168,21 @@ const TherapistProfile: React.FC = () => {
               </div>
               
               <div className="tp-perks">
-                <div className="perk-item">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
+                <div className="perk-item" style={{ alignItems: 'flex-start' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginTop: '3px' }}>
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
                   </svg>
-                  Instant Booking Confirmation
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--ink)' }}>Available Schedule</span>
+                    <span style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: 1.5 }}>
+                      {therapist.availableSchedule ? therapist.availableSchedule.replace(/ \| /g, ' and ') : "Standard Clinic Hours."}
+                    </span>
+                  </div>
                 </div>
+
                 <div className="perk-item">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <circle cx="12" cy="12" r="10"/>

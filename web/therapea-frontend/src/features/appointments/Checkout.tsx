@@ -10,6 +10,8 @@ interface Therapist {
     email: string;
     rate: number;
     specialization?: string;
+    availableSchedule?: string; 
+    whatToExpect?: string;      
 }
 
 interface BookingReceipt {
@@ -20,6 +22,47 @@ interface BookingReceipt {
     amountPaid: number;
     balance: number;
 }
+
+// Extract active days for calendar blocking
+const parseAvailableDays = (scheduleStr?: string): Set<number> => {
+    if (!scheduleStr || scheduleStr === "Not currently available") return new Set([1, 2, 3, 4, 5]); 
+    const mapping: Record<string, number> = { "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5, "Saturday": 6 };
+    const activeDays = new Set<number>();
+    scheduleStr.split(',').forEach(part => {
+        const day = part.split(':')[0].trim();
+        if (mapping[day] !== undefined) activeDays.add(mapping[day]);
+    });
+    return activeDays.size > 0 ? activeDays : new Set([1, 2, 3, 4, 5]);
+};
+
+// 🟢 NEW: Directly pulls the exact starting times the doctor defined as the available slots
+const generateDynamicSlots = (date: Date | null, scheduleStr?: string): string[] => {
+    if (!date || !scheduleStr || scheduleStr === "Not currently available") return [];
+    
+    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayName = days[date.getDay()];
+
+    const dayEntries = scheduleStr.split(', ');
+    const targetDayEntry = dayEntries.find(entry => entry.startsWith(`${dayName}:`));
+    
+    if (!targetDayEntry) return [];
+
+    const timeBlocksPart = targetDayEntry.split(': ')[1];
+    if (!timeBlocksPart) return [];
+
+    const slots: string[] = [];
+    const blocks = timeBlocksPart.includes('|') ? timeBlocksPart.split(' | ') : timeBlocksPart.split(' and ');
+
+    blocks.forEach(block => {
+        const [startStr, endStr] = block.split(' - ');
+        if (startStr && endStr) {
+            // Simply map the exact starting time of the block as the bookable slot
+            slots.push(startStr.trim());
+        }
+    });
+    
+    return [...new Set(slots)]; // Remove any accidental duplicates
+};
 
 const Checkout: React.FC = () => {
     const navigate = useNavigate();
@@ -32,21 +75,17 @@ const Checkout: React.FC = () => {
     const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
     const [globalError, setGlobalError] = useState<string | null>(null);
 
-    // Step 1: Intake
     const [assessmentType, setAssessmentType] = useState<string>('');
     const [notes, setNotes] = useState<string>('');
 
-    // Step 2: Scheduling
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedTime, setSelectedTime] = useState<string | null>(null);
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
-    // Step 3: Review & Payment
     const [sessionFormat, setSessionFormat] = useState<'online' | 'face-to-face'>('online');
     const [paymentMethod, setPaymentMethod] = useState<'online-full' | 'online-partial'>('online-full');
     const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-    // Step 4: Verification & Receipt
     const [confirmationNumber, setConfirmationNumber] = useState('');
     const [receiptData, setReceiptData] = useState<BookingReceipt | null>(null);
     
@@ -56,17 +95,18 @@ const Checkout: React.FC = () => {
 
     const [providerBookedSlots, setProviderBookedSlots] = useState<{ date: string, time: string }[]>([]);
 
-    /* ─── MEMOIZED CONSTANTS ─── */
-    const availableTimeSlots = useMemo(() => ["9:00 AM", "10:30 AM", "1:00 PM", "2:30 PM", "4:00 PM"], []);
+    /* ─── MEMOIZED DATA ─── */
     const today = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
-    
+    const activeDaysSet = useMemo(() => parseAvailableDays(therapist?.availableSchedule), [therapist]);
+    const dynamicTimeSlots = useMemo(() => generateDynamicSlots(selectedDate, therapist?.availableSchedule), [selectedDate, therapist?.availableSchedule]);
+
     const pricing = useMemo(() => {
         const base = therapist?.rate || 1500;
         const deposit = paymentMethod === 'online-full' ? base : Math.round(base * 0.5);
         return { base, deposit, pending: base - deposit };
     }, [therapist, paymentMethod]);
 
-    /* ─── EFFECT: PAYMONGO RETURN HANDLER ─── */
+
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const status = urlParams.get('status');
@@ -75,9 +115,7 @@ const Checkout: React.FC = () => {
             const cachedBooking = sessionStorage.getItem('pendingTherapyBooking');
 
             if (cachedBooking) {
-                // FIXED: WIPE CACHE IMMEDIATELY! This prevents React Strict Mode from double-firing the DB save.
                 sessionStorage.removeItem('pendingTherapyBooking');
-                
                 const parsedData = JSON.parse(cachedBooking);
 
                 const finalizeBookingOnServer = async () => {
@@ -92,7 +130,6 @@ const Checkout: React.FC = () => {
                             const txId = `THP-ACK-${Date.now()}-${Math.floor(Math.random() * 999)}`;
                             setConfirmationNumber(txId);
                             setReceiptData(parsedData.receiptData);
-                            
                             window.history.replaceState({}, document.title, window.location.pathname);
                             setStep(4);
                         } else {
@@ -105,7 +142,6 @@ const Checkout: React.FC = () => {
                         setIsVerifyingReturn(false);
                     }
                 };
-
                 finalizeBookingOnServer();
             } else {
                 setIsVerifyingReturn(false);
@@ -114,9 +150,7 @@ const Checkout: React.FC = () => {
             return;
         }
 
-        if (!therapist && !status) {
-            navigate('/therapists', { replace: true });
-        }
+        if (!therapist && !status) navigate('/therapists', { replace: true });
     }, [therapist, navigate, API_BASE_URL]);
 
     /* ─── DATA FETCHING ─── */
@@ -160,24 +194,14 @@ const Checkout: React.FC = () => {
 
         const sessionStoreData = {
             dbPayload: {
-                email: user.email,
-                providerName: therapist.name,
-                providerEmail: therapist.email,
-                date: fmtDate,
-                time: selectedTime,
-                type: sessionFormat === 'online' ? 'Telehealth' : 'In-Person',
-                assessmentType,
-                notes,
-                amountPaid: pricing.deposit,
-                status: 'Scheduled'
+                email: user.email, providerName: therapist.name, providerEmail: therapist.email,
+                date: fmtDate, time: selectedTime, type: sessionFormat === 'online' ? 'Telehealth' : 'In-Person',
+                assessmentType, notes, amountPaid: pricing.deposit, status: 'Scheduled'
             },
             receiptData: {
-                therapistName: therapist.name,
-                date: fmtDate,
-                time: selectedTime,
+                therapistName: therapist.name, date: fmtDate, time: selectedTime,
                 type: sessionFormat === 'online' ? 'Video Consultation' : 'Face-to-Face Clinic',
-                amountPaid: pricing.deposit,
-                balance: pricing.pending
+                amountPaid: pricing.deposit, balance: pricing.pending
             }
         };
 
@@ -185,48 +209,33 @@ const Checkout: React.FC = () => {
 
         try {
             const response = await fetch(`${API_BASE_URL}/api/payments/create-link`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    amount: pricing.deposit,
-                    description: `Therapy Booking: ${therapist.name}`,
-                    email: user.email
-                })
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: pricing.deposit, description: `Therapy Booking: ${therapist.name}`, email: user.email })
             });
 
             const linkData = await response.json();
-            if (linkData.success && linkData.checkoutUrl) {
-                window.location.href = linkData.checkoutUrl;
-            } else {
-                setGlobalError("Payment gateway is temporarily unavailable. Please try again later.");
-                setIsVerifyingReturn(false);
-            }
+            if (linkData.success && linkData.checkoutUrl) window.location.href = linkData.checkoutUrl;
+            else { setGlobalError("Payment gateway is temporarily unavailable. Please try again later."); setIsVerifyingReturn(false); }
         } catch (err) {
             setGlobalError("Connection failed. Check your internet.");
             setIsVerifyingReturn(false);
         }
     };
 
-    /* ─── STYLES (INLINE FOR PRINT FIDELITY) ─── */
     const styles = {
         card: { backgroundColor: '#fff', padding: '40px', borderRadius: '24px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9' },
         headerLabel: { display: 'block', marginBottom: '10px', fontWeight: 700, fontSize: '12px', color: '#94a3b8', textTransform: 'uppercase' as const, letterSpacing: '1px' },
-        receiptBox: { border: '2px solid #f1f5f9', borderRadius: '20px', overflow: 'hidden' as const, marginTop: '30px' },
         primaryBtn: { width: '100%', padding: '20px', backgroundColor: '#0A5C36', color: '#fff', border: 'none', borderRadius: '16px', fontWeight: 800, fontSize: '16px', cursor: 'pointer' },
-        secondaryBtn: { width: '100%', padding: '18px', backgroundColor: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '16px', fontWeight: 600, fontSize: '15px', cursor: 'pointer' }
     };
 
-    /* ─── UI COMPONENTS ─── */
     const renderHeader = () => (
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '20px' }}>
                 {[1, 2, 3].map(i => (
                     <React.Fragment key={i}>
                         <div style={{
-                            width: '32px', height: '32px', borderRadius: '50%',
-                            backgroundColor: step >= i ? '#0A5C36' : '#f1f5f9',
-                            color: step >= i ? '#fff' : '#94a3b8',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            width: '32px', height: '32px', borderRadius: '50%', backgroundColor: step >= i ? '#0A5C36' : '#f1f5f9',
+                            color: step >= i ? '#fff' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontWeight: 'bold', fontSize: '14px', border: step === i ? '2px solid #052e16' : 'none'
                         }}>{i}</div>
                         {i < 3 && <div style={{ width: '40px', height: '2px', alignSelf: 'center', backgroundColor: step > i ? '#0A5C36' : '#f1f5f9' }} />}
@@ -239,19 +248,14 @@ const Checkout: React.FC = () => {
         </div>
     );
 
-    /* ─── MAIN RENDER LOGIC ─── */
     if (isVerifyingReturn) {
         return (
             <SidebarLayout title="Verifying Transaction">
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '70vh' }}>
                     <div className="custom-loader" />
                     <h2 style={{ marginTop: '25px', color: '#1e293b' }}>Confirming with PayMongo...</h2>
-                    <p style={{ color: '#64748b' }}>We are securing your appointment slot. Please wait.</p>
                 </div>
-                <style>{`
-                    .custom-loader { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #0A5C36; border-radius: 50%; animation: spin 1s linear infinite; }
-                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                `}</style>
+                <style>{`.custom-loader { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #0A5C36; border-radius: 50%; animation: spin 1s linear infinite; } @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
             </SidebarLayout>
         );
     }
@@ -263,12 +267,7 @@ const Checkout: React.FC = () => {
             <div style={{ maxWidth: '900px', margin: '0 auto', paddingBottom: '100px' }}>
                 
                 {step < 4 && renderHeader()}
-                
-                {globalError && (
-                    <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fee2e2', color: '#b91c1c', padding: '20px', borderRadius: '15px', marginBottom: '25px', fontWeight: 500 }}>
-                        {globalError}
-                    </div>
-                )}
+                {globalError && <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fee2e2', color: '#b91c1c', padding: '20px', borderRadius: '15px', marginBottom: '25px', fontWeight: 500 }}>{globalError}</div>}
 
                 {/* STEP 1: INTAKE */}
                 {step === 1 && therapist && (
@@ -289,19 +288,13 @@ const Checkout: React.FC = () => {
                         </div>
 
                         <label style={styles.headerLabel}>Message for the therapist (Optional)</label>
-                        <textarea 
-                            value={notes} onChange={e => setNotes(e.target.value)}
-                            placeholder="Briefly describe your goals for this session..."
-                            style={{ width: '100%', minHeight: '120px', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '30px', fontSize: '15px', outline: 'none' }}
-                        />
+                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Briefly describe your goals for this session..." style={{ width: '100%', minHeight: '120px', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '30px', fontSize: '15px', outline: 'none' }} />
 
-                        <button disabled={!assessmentType} onClick={() => setStep(2)} style={{ ...styles.primaryBtn, opacity: !assessmentType ? 0.5 : 1 }}>
-                            Continue to Scheduling
-                        </button>
+                        <button disabled={!assessmentType} onClick={() => setStep(2)} style={{ ...styles.primaryBtn, opacity: !assessmentType ? 0.5 : 1 }}>Continue to Scheduling</button>
                     </div>
                 )}
 
-                {/* STEP 2: CALENDAR */}
+                {/* STEP 2: CALENDAR & DYNAMIC SCHEDULE */}
                 {step === 2 && (
                     <div className="animate-in" style={styles.card}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '50px' }}>
@@ -318,14 +311,20 @@ const Checkout: React.FC = () => {
                                     {calendar.blanks.map(b => <div key={`b-${b}`} />)}
                                     {calendar.days.map(d => {
                                         const dObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d);
+                                        const dayOfWeekIndex = dObj.getDay();
                                         const isPast = dObj < today;
+                                        
+                                        const isDoctorUnavailable = !activeDaysSet.has(dayOfWeekIndex);
+                                        const isDisabled = isPast || isDoctorUnavailable;
                                         const isSelected = selectedDate?.toDateString() === dObj.toDateString();
+                                        
                                         return (
-                                            <button key={d} disabled={isPast} onClick={() => { setSelectedDate(dObj); setSelectedTime(null); }} style={{
-                                                padding: '12px 0', border: 'none', borderRadius: '12px', cursor: isPast ? 'default' : 'pointer',
+                                            <button key={d} disabled={isDisabled} onClick={() => { setSelectedDate(dObj); setSelectedTime(null); }} style={{
+                                                padding: '12px 0', border: 'none', borderRadius: '12px', cursor: isDisabled ? 'not-allowed' : 'pointer',
                                                 backgroundColor: isSelected ? '#0A5C36' : 'transparent',
-                                                color: isSelected ? '#fff' : (isPast ? '#cbd5e1' : '#1e293b'),
-                                                fontWeight: isSelected ? 800 : 500
+                                                color: isSelected ? '#fff' : (isDisabled ? '#e2e8f0' : '#1e293b'),
+                                                fontWeight: isSelected ? 800 : 500,
+                                                textDecoration: isDoctorUnavailable && !isPast ? 'line-through' : 'none'
                                             }}>{d}</button>
                                         );
                                     })}
@@ -333,26 +332,48 @@ const Checkout: React.FC = () => {
                             </div>
 
                             <div style={{ borderLeft: '1px solid #f1f5f9', paddingLeft: '50px' }}>
-                                <h3 style={{ marginBottom: '25px' }}>Available Slots</h3>
-                                {!selectedDate ? <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>Please pick a date first.</p> : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                        {availableTimeSlots.map(t => {
+                                
+                                {/* UI UPDATE: Card is removed, Select Time Slot takes prominence */}
+                                <h3 style={{ margin: '0 0 20px 0', fontSize: '20px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                    Select Time Slot
+                                </h3>
+
+                                {!selectedDate ? (
+                                    <div style={{ padding: '30px', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
+                                        <p style={{ color: '#64748b', fontStyle: 'italic', margin: 0 }}>Please select a date from the calendar first.</p>
+                                    </div>
+                                ) : dynamicTimeSlots.length === 0 ? (
+                                    <div style={{ padding: '30px', textAlign: 'center', background: '#FEF2F2', borderRadius: '16px', border: '1px dashed #FECACA' }}>
+                                        <p style={{ color: '#991B1B', fontWeight: 500, margin: 0 }}>No slots available on this date.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', maxHeight: '350px', overflowY: 'auto', paddingRight: '5px' }}>
+                                        {dynamicTimeSlots.map(t => {
                                             const fmt = selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
                                             const isTaken = providerBookedSlots.some(s => s.date === fmt && s.time === t);
                                             return (
                                                 <button key={t} disabled={isTaken} onClick={() => setSelectedTime(t)} style={{
-                                                    padding: '16px', borderRadius: '12px', border: selectedTime === t ? '2.5px solid #0A5C36' : '1px solid #e2e8f0',
+                                                    padding: '16px 12px', borderRadius: '12px', border: selectedTime === t ? '2px solid #0A5C36' : '1px solid #e2e8f0',
                                                     backgroundColor: selectedTime === t ? '#f0fdf4' : (isTaken ? '#f8fafc' : '#fff'),
-                                                    color: isTaken ? '#cbd5e1' : '#1e293b', fontWeight: 700, cursor: isTaken ? 'not-allowed' : 'pointer'
-                                                }}>{t} {isTaken && '(Booked)'}</button>
+                                                    color: isTaken ? '#94a3b8' : (selectedTime === t ? '#064e3b' : '#1e293b'), fontWeight: 700, cursor: isTaken ? 'not-allowed' : 'pointer',
+                                                    transition: 'all 0.2s', boxShadow: selectedTime === t ? '0 4px 12px rgba(10, 92, 54, 0.1)' : 'none',
+                                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px'
+                                                }}>
+                                                    <span>{t}</span>
+                                                    {isTaken && <span style={{fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700, color: '#94a3b8'}}>Booked</span>}
+                                                </button>
                                             );
                                         })}
                                     </div>
                                 )}
                             </div>
                         </div>
-                        <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between' }}>
-                            <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontWeight: 700 }}>← Back</button>
+                        <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: '15px' }}>← Back</button>
                             <button disabled={!selectedDate || !selectedTime} onClick={() => setStep(3)} style={{ ...styles.primaryBtn, width: '250px', opacity: (!selectedDate || !selectedTime) ? 0.5 : 1 }}>Review Summary</button>
                         </div>
                     </div>
@@ -393,7 +414,7 @@ const Checkout: React.FC = () => {
                         </div>
 
                         <div style={{ borderTop: '2px dashed #f1f5f9', paddingTop: '30px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                             <span style={{ fontWeight: 600, color: '#64748b' }}>Due Today (PayMongo)</span>
+                             <span style={{ fontWeight: 600, color: '#64748b' }}>To pay</span>
                              <span style={{ fontWeight: 900, fontSize: '32px', color: '#0A5C36' }}>₱{pricing.deposit.toLocaleString()}</span>
                         </div>
 
@@ -416,7 +437,6 @@ const Checkout: React.FC = () => {
                             <h1 style={{ fontSize: '32px', color: '#1e293b', marginBottom: '8px' }}>Booking Confirmed!</h1>
                             <p style={{ color: '#64748b' }}>We've sent a detailed confirmation to your email.</p>
                         </div>
-
                         <div className="receipt-border">
                             <div style={{ padding: '20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
                                 <span style={{ fontWeight: 800, color: '#475569', fontSize: '12px', textTransform: 'uppercase' }}>Official E-Receipt</span>
@@ -437,23 +457,20 @@ const Checkout: React.FC = () => {
                         </div>
 
                         <div className="no-print" style={{ marginTop: '40px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                            <button onClick={() => window.print()} className="receipt-download-btn">
-                                Download Soft Copy (PDF)
-                            </button>
+                            <button onClick={() => window.print()} className="receipt-download-btn">Download Soft Copy (PDF)</button>
                             <button onClick={() => navigate('/dashboard')} className="receipt-home-btn">Return to My Dashboard</button>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* CONFIRMATION OVERLAY */}
             {showConfirmModal && (
                 <div className="modal-overlay">
                     <div className="modal-content scale-in">
                         <h2 style={{ fontSize: '24px', marginBottom: '15px' }}>Final Confirmation</h2>
                         <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '30px' }}>
-                            You are about to be redirected to our secure payment processor (PayMongo).
-                            Once the transaction is complete, **please wait to be redirected back here** to receive your receipt.
+                            You are about to be redirected to our secure payment processor.
+                            Once the transaction is complete, <b>PLEASE WAIT to be redirected back here to receive your receipt.</b>
                         </p>
                         <div style={{ display: 'flex', gap: '15px' }}>
                             <button onClick={() => setShowConfirmModal(false)} className="modal-cancel">Cancel</button>
@@ -462,7 +479,6 @@ const Checkout: React.FC = () => {
                     </div>
                 </div>
             )}
-
             <style>{`
                 .cal-nav-btn { padding: 10px 15px; border: 1px solid #e2e8f0; background: #fff; borderRadius: 10px; cursor: pointer; font-size: 18px; }
                 .cal-nav-btn:hover { background: #f8fafc; }

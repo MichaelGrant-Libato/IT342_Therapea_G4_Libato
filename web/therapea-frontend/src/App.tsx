@@ -70,8 +70,7 @@ function App() {
         <Route path="/assessment"     element={<ProtectedRoute allowedRoles={['PATIENT']}><Assessment /></ProtectedRoute>} />
         <Route path="/assessment-result/:id" element={<ProtectedRoute allowedRoles={['PATIENT']}><AssessmentResult /></ProtectedRoute>} />
         <Route path="/assessments-history"   element={<ProtectedRoute allowedRoles={['PATIENT']}><AssessmentHistory /></ProtectedRoute>} />
-        <Route path="/progress"       element={<ProtectedRoute allowedRoles={['PATIENT']}><Progress /></ProtectedRoute>} />
-
+        <Route path="/progress" element={<ProtectedRoute allowedRoles={['DOCTOR', 'PATIENT']}><Progress /></ProtectedRoute>} />
         {/* ── Protected: Doctor Only ── */}
         <Route path="/patients"      element={<ProtectedRoute allowedRoles={['DOCTOR']}><Patients /></ProtectedRoute>} />
         

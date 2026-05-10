@@ -68,16 +68,18 @@ public class UserEntity {
     @Column(name = "rejection_reason")
     private String rejectionReason;
 
-
     @Column(name = "prc_license_data")
     private byte[] prcLicenseData;
 
     @Column(name = "prc_license_type")
     private String prcLicenseType;
 
-    // ==========================================
-    // Getters and Setters
-    // ==========================================
+    @Column(columnDefinition = "TEXT")
+    private String availableSchedule;
+
+    @Column(columnDefinition = "TEXT")
+    private String whatToExpect;
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
@@ -143,4 +145,10 @@ public class UserEntity {
 
     public String getPrcLicenseType() { return prcLicenseType; }
     public void setPrcLicenseType(String prcLicenseType) { this.prcLicenseType = prcLicenseType; }
+
+    public String getAvailableSchedule() { return availableSchedule; }
+    public void setAvailableSchedule(String availableSchedule) { this.availableSchedule = availableSchedule; }
+
+    public String getWhatToExpect() { return whatToExpect; }
+    public void setWhatToExpect(String whatToExpect) { this.whatToExpect = whatToExpect; }
 }

@@ -1,5 +1,6 @@
 package com.therapea.backend.features.appointments;
 
+import com.therapea.backend.features.notifications.NotificationService;
 import com.therapea.backend.features.users.UserEntity;
 import com.therapea.backend.features.users.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,9 @@ public class AppointmentController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private NotificationService notificationService;
+
     // ─── 1. BOOK APPOINTMENT ───
     @PostMapping("/book")
     public ResponseEntity<?> bookAppointment(@RequestBody Map<String, String> payload) {
@@ -46,6 +50,26 @@ public class AppointmentController {
             apt.setToday(false);
 
             appointmentService.saveAppointment(apt);
+
+            // 🔴 NEW LOGIC: Trigger Real-time Notifications!
+
+            // 1. Notify the Doctor about the new booking
+            if (apt.getProviderEmail() != null) {
+                notificationService.createNotification(
+                        apt.getProviderEmail(),
+                        "New Appointment Booked",
+                        apt.getPatientName() + " has booked a session with you on " + apt.getDisplayDate() + " at " + apt.getDisplayTime() + ".",
+                        "BOOKING"
+                );
+            }
+
+            // 2. Notify the Patient that their booking was successful
+            notificationService.createNotification(
+                    email,
+                    "Booking Confirmed",
+                    "Your " + apt.getAppointmentType() + " session with " + apt.getProviderName() + " on " + apt.getDisplayDate() + " at " + apt.getDisplayTime() + " is confirmed.",
+                    "BOOKING"
+            );
 
             return ResponseEntity.ok(Map.of("success", true, "message", "Appointment booked successfully!"));
         } catch (Exception e) {
@@ -82,7 +106,7 @@ public class AppointmentController {
                 map.put("providerName", e.getProviderName());
                 map.put("providerEmail", e.getProviderEmail());
 
-                // 🔴 NEW LOGIC: Look up the Doctor's profile picture using their email!
+                // Look up the Doctor's profile picture using their email
                 if (e.getProviderEmail() != null) {
                     UserEntity doctor = userService.getUserByEmail(e.getProviderEmail());
                     map.put("providerProfilePictureUrl", doctor != null ? doctor.getProfilePictureUrl() : null);
@@ -111,6 +135,9 @@ public class AppointmentController {
                 apt.setCancelReason(payload.get("reason"));
 
                 appointmentService.saveAppointment(apt);
+
+                // Optional: You could also add a cancellation notification here later!
+
                 return ResponseEntity.ok(Map.of("success", true, "message", "Appointment canceled successfully"));
             } else {
                 return ResponseEntity.status(404).body(Map.of("success", false, "message", "Appointment not found"));
