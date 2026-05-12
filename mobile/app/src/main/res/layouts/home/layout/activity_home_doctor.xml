@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F6F2"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="68dp"
+        android:background="#FFFFFF"
+        android:elevation="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="24dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Dashboard" android:textColor="#1C1F1A" android:textSize="18sp" android:textStyle="bold" />
+        <ImageView android:id="@+id/btnLogout" android:layout_width="24dp" android:layout_height="24dp" android:src="@android:drawable/ic_menu_revert" app:tint="#7A8077" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- Welcome Header -->
+            <TextView android:id="@+id/tvWelcomeName" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Good to see you, Dr." android:textColor="#1C1F1A" android:textSize="26sp" android:textStyle="bold" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:layout_marginBottom="24dp" android:text="Here is a summary of your practice activity today." android:textColor="#7A8077" android:textSize="15sp" />
+
+            <!-- Stats Grid -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="12dp">
+                <com.google.android.material.card.MaterialCardView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="6dp" app:cardBackgroundColor="#FFFFFF" app:cardCornerRadius="16dp" app:strokeColor="#ECEEE8" app:strokeWidth="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                        <TextView android:id="@+id/tvStatAppointments" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#1C1F1A" android:textSize="28sp" android:textStyle="bold" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Upcoming" android:textColor="#7A8077" android:textSize="13sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="6dp" app:cardBackgroundColor="#FFFFFF" app:cardCornerRadius="16dp" app:strokeColor="#ECEEE8" app:strokeWidth="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                        <TextView android:id="@+id/tvStatPatients" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#1C1F1A" android:textSize="28sp" android:textStyle="bold" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total patients" android:textColor="#7A8077" android:textSize="13sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="24dp">
+                <com.google.android.material.card.MaterialCardView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="6dp" app:cardBackgroundColor="#FFFFFF" app:cardCornerRadius="16dp" app:strokeColor="#ECEEE8" app:strokeWidth="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                        <TextView android:id="@+id/tvStatPending" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#1C1F1A" android:textSize="28sp" android:textStyle="bold" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Pending reviews" android:textColor="#7A8077" android:textSize="13sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="6dp" app:cardBackgroundColor="#FFFFFF" app:cardCornerRadius="16dp" app:strokeColor="#ECEEE8" app:strokeWidth="1dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+                        <TextView android:id="@+id/tvStatAlerts" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textColor="#991B1B" android:textSize="28sp" android:textStyle="bold" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Urgent alerts" android:textColor="#7A8077" android:textSize="13sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Triage Queue Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="#ECEEE8"
+                app:strokeWidth="1dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="16dp" android:text="Triage Queue" android:textColor="#1C1F1A" android:textStyle="bold" />
+                    <TextView android:id="@+id/tvEmptyTriage" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:paddingVertical="16dp" android:text="All caught up!" android:textColor="#7A8077" />
+                    <LinearLayout android:id="@+id/listTriage" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

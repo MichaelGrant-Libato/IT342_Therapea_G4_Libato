@@ -1,4 +1,4 @@
-package com.therapea.app.network
+package com.therapea.app.core.network
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory

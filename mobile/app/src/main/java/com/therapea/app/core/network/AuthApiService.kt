@@ -1,4 +1,4 @@
-package com.therapea.app.network
+package com.therapea.app.core.network
 
 import okhttp3.MultipartBody
 import okhttp3.RequestBody

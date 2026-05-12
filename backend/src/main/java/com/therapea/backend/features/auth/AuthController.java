@@ -57,7 +57,7 @@ public class AuthController {
 
             if ("REGISTER".equalsIgnoreCase(type) && existingUser != null) {
                 if (!"REJECTED".equals(existingUser.getStatus())) {
-                    return ResponseEntity.badRequest().body(Map.of("error", "Email is already registered. Please sign in."));
+                    return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "User already exists"));
                 }
             }
 
@@ -65,18 +65,15 @@ public class AuthController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Account not found. Please check the email or register."));
             }
 
-            // 🔴 THE FIX: Properly identify Google Accounts by checking for the hashed empty string
             if ("FORGOT_PASSWORD".equalsIgnoreCase(type) && existingUser != null) {
                 boolean isGoogleAccount = existingUser.getPassword() == null ||
                         existingUser.getPassword().isEmpty() ||
                         passwordEncoder.matches("", existingUser.getPassword());
 
                 if (isGoogleAccount) {
-                    // Google Account: Sends REAL OTP email to Gmail
                     otpService.generateAndSendOtp(email, type);
                     return ResponseEntity.ok(Map.of("success", true, "requiresOtp", true, "message", "Verification code sent to your email."));
                 } else {
-                    // Regular Account: Skip OTP completely
                     return ResponseEntity.ok(Map.of("success", true, "requiresOtp", false, "message", "Proceeding to password reset"));
                 }
             }
@@ -131,9 +128,6 @@ public class AuthController {
         }
     }
 
-    // ==========================================
-    // OTHER ENDPOINTS
-    // ==========================================
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody UserRegistrationDTO registrationDTO) {
         try {
@@ -283,7 +277,6 @@ public class AuthController {
             UserEntity checkUser = userService.getUserByEmail(loginDTO.getEmail());
 
             if (checkUser != null) {
-                // 🔴 THE FIX AGAIN: Intercept Google Accounts logging in through manual form
                 boolean isGoogleAccount = checkUser.getPassword() == null ||
                         checkUser.getPassword().isEmpty() ||
                         passwordEncoder.matches("", checkUser.getPassword());

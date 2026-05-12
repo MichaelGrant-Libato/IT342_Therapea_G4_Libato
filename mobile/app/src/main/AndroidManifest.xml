@@ -4,14 +4,11 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-
     <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -23,8 +20,9 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:usesCleartextTraffic="true">
 
+        <!-- LANDING PAGE (Main Launcher) -->
         <activity
-            android:name=".ui.landing.LandingActivity"
+            android:name=".features.landing.LandingActivity"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -33,28 +31,39 @@
             </intent-filter>
         </activity>
 
+        <!-- LOGIN (Deep Link Catcher) -->
         <activity
-            android:name=".ui.auth.LoginActivity"
-            android:exported="false"
+            android:name=".features.auth.LoginActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
             android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="therapea" android:host="login" />
+            </intent-filter>
+        </activity>
 
+        <!-- REGISTER (Deep Link Catcher) -->
         <activity
-            android:name=".ui.auth.RegisterActivity"
-            android:exported="false"
+            android:name=".features.auth.RegisterActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
             android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustResize" />
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="therapea" android:host="register" />
+            </intent-filter>
+        </activity>
 
-        <activity
-            android:name=".ui.home.HomeActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name=".ui.home.DoctorHomeActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+        <!-- DASHBOARDS -->
+        <activity android:name=".features.home.HomeActivity" android:exported="false" android:screenOrientation="portrait" />
+        <activity android:name=".features.home.DoctorHomeActivity" android:exported="false" android:screenOrientation="portrait" />
 
     </application>
-
 </manifest>

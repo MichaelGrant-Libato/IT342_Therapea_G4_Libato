@@ -3,7 +3,7 @@ package com.therapea.app
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import com.therapea.app.ui.landing.LandingActivity
+import com.therapea.app.features.landing.LandingActivity
 
 class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {

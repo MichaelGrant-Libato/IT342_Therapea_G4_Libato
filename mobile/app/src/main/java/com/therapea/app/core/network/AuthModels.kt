@@ -1,4 +1,4 @@
-package com.therapea.app.network
+package com.therapea.app.core.network
 
 
 data class LoginRequest(

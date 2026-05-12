@@ -38,14 +38,18 @@ public class GoogleAuthController {
     // Step 1: Generate Google OAuth2 authorization URL
     // ─────────────────────────────────────────────
     @GetMapping("/google-register-url")
-    public ResponseEntity<Map<String, Object>> getGoogleRegisterUrl() {
+    public ResponseEntity<Map<String, Object>> getGoogleRegisterUrl(
+            @RequestParam(value = "source", required = false) String source) {
         try {
             String scopes = URLEncoder.encode(
                     "https://www.googleapis.com/auth/userinfo.email " +
                             "https://www.googleapis.com/auth/userinfo.profile",
                     StandardCharsets.UTF_8
             );
-            String state = UUID.randomUUID().toString();
+
+            // If source=android, prefix the state so the callback knows!
+            String baseState = UUID.randomUUID().toString();
+            String state = "android".equals(source) ? "android_" + baseState : baseState;
 
             String authUrl = GOOGLE_AUTH_URL + "?" +
                     "client_id="     + URLEncoder.encode(googleClientId, StandardCharsets.UTF_8) +
@@ -67,7 +71,6 @@ public class GoogleAuthController {
 
     // ─────────────────────────────────────────────
     // Step 2: Handle Google OAuth2 callback
-    // Returns HTML that postMessages result to parent window (popup flow)
     // ─────────────────────────────────────────────
     @GetMapping("/google/callback")
     public void googleCallback(
@@ -133,13 +136,51 @@ public class GoogleAuthController {
 
             UserEntity existingUser = userService.getUserByEmail(email);
 
+            // ==========================================
+            // 1. Detect if this came from the Android App
+            // ==========================================
+            boolean isAndroidApp = state != null && state.startsWith("android_");
+
+            if (isAndroidApp) {
+                String redirectUrl;
+                if (existingUser != null) {
+                    System.out.println("📱 Routing existing user to Android Login");
+                    redirectUrl = "therapea://login?email=" + URLEncoder.encode(email, StandardCharsets.UTF_8) + "&type=existing";
+                } else {
+                    System.out.println("📱 Routing new user to Android Register");
+                    redirectUrl = "therapea://login?email=" + URLEncoder.encode(email, StandardCharsets.UTF_8) + "&type=new";
+                }
+
+                // 🔴 THE FIX: Return an HTML page that says "Authenticating..." instead of "Login Successful"
+                httpResponse.setContentType("text/html;charset=UTF-8");
+                httpResponse.getWriter().write(
+                        "<!DOCTYPE html>" +
+                                "<html>" +
+                                "<head><meta name='viewport' content='width=device-width, initial-scale=1.0'></head>" +
+                                "<body style='text-align:center; font-family:sans-serif; padding-top:20%; background-color:#F5F6F2; margin:0;'>" +
+                                "    <h2 style='color:#1C1F1A;'>Authenticating...</h2>" +
+                                "    <p style='color:#4A5047;'>Returning you to TheraPea...</p>" +
+                                "    <script>" +
+                                "        // JavaScript automatically triggers the app launch" +
+                                "        setTimeout(function() { window.location.href = '" + redirectUrl + "'; }, 100);" +
+                                "    </script>" +
+                                "    <br><br>" +
+                                "    <!-- Fallback button if Chrome blocks the automated JS jump -->" +
+                                "    <a href='" + redirectUrl + "' style='display:inline-block; padding:14px 28px; background-color:#7A9E78; color:white; text-decoration:none; border-radius:24px; font-weight:bold;'>Open App Now</a>" +
+                                "</body>" +
+                                "</html>"
+                );
+                return;
+            }
+
+            // ==========================================
+            // 2. React Web App Popup Logic
+            // ==========================================
             if (existingUser != null) {
-                // Existing user — tell popup to trigger OTP login flow
-                System.out.println("ℹ️ Existing user: " + email);
+                System.out.println("🌐 Existing web user: " + email);
                 sendPopupMessage(httpResponse, "existing", email, null);
             } else {
-                // New user — tell popup to show profile completion
-                System.out.println("ℹ️ New user: " + email);
+                System.out.println("🌐 New web user: " + email);
                 sendPopupMessage(httpResponse, "new", email, name);
             }
 
