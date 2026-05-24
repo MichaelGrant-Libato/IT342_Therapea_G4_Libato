@@ -1,0 +1,113 @@
+<!-- app/src/main/res/layouts/checkout/layout/activity_checkout.xml -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/checkoutScroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8FAFC"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:id="@+id/checkoutRoot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Header -->
+        <LinearLayout
+            android:id="@+id/checkoutHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/admin_bg_card"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:id="@+id/tvCheckoutStep"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/admin_bg_pill_green"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="7dp"
+                android:text="Step 1 of 4"
+                android:textColor="#0A5C36"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvCheckoutTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:fontFamily="serif"
+                android:gravity="center"
+                android:text="Booking Intake"
+                android:textColor="#1E293B"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvCheckoutSubtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:text="Help your therapist understand your needs before the session."
+                android:textColor="#64748B"
+                android:textSize="14sp" />
+
+            <ProgressBar
+                android:id="@+id/checkoutProgress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="18dp"
+                android:max="4"
+                android:progress="1" />
+        </LinearLayout>
+
+        <!-- Main dynamic card -->
+        <LinearLayout
+            android:id="@+id/checkoutCardContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/admin_bg_card"
+            android:orientation="vertical"
+            android:padding="20dp" />
+
+        <!-- Actions -->
+        <LinearLayout
+            android:id="@+id/checkoutActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnCheckoutBack"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:background="@drawable/admin_bg_button_outline"
+                android:text="Back"
+                android:textAllCaps="false"
+                android:textColor="#1E293B"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btnCheckoutNext"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="10dp"
+                android:layout_weight="1"
+                android:background="@drawable/admin_bg_button_primary"
+                android:text="Continue"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

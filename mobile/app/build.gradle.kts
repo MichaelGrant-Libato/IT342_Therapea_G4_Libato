@@ -1,7 +1,13 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
-    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
+}
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
 }
 
 android {
@@ -15,22 +21,46 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // ── Google Sign-In ────────────────────────────────────────────────
+        val googleClientId = localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", "")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleClientId\"")
+        resValue("string", "google_web_client_id", googleClientId)
+
+        // ── PayMongo ──────────────────────────────────────────────────────
+        val paymongoKey = localProperties.getProperty("PAYMONGO_SECRET_KEY", "")
+        buildConfigField("String", "PAYMONGO_SECRET_KEY", "\"$paymongoKey\"")
+
+        // ── Agora ─────────────────────────────────────────────────────────
+        val agoraAppId = localProperties.getProperty("AGORA_APP_ID", "")
+        buildConfigField("String", "AGORA_APP_ID", "\"$agoraAppId\"")
+
+        val baseUrl = localProperties.getProperty("BASE_URL", "http://10.0.2.2:8083/api/")
+        buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions { jvmTarget = "1.8" }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
     buildFeatures {
         viewBinding = true
-        compose = false
+        compose     = false
         buildConfig = true
     }
 
@@ -41,6 +71,20 @@ android {
                 "src/main/res/layouts/landing",
                 "src/main/res/layouts/home",
                 "src/main/res/layouts/onboarding",
+                "src/main/res/layouts/emergencyMap",
+                "src/main/res/layouts/admin",
+                "src/main/res/layouts/appointments",
+                "src/main/res/layouts/checkout",
+                "src/main/res/layouts/assessment",
+                "src/main/res/layouts/messages",
+                "src/main/res/layouts/progress",
+                "src/main/res/layouts/map",
+                "src/main/res/layouts/therapists",
+                "src/main/res/layouts/therapists/adapter",
+                "src/main/res/layouts/therapists/model",
+                "src/main/res/layouts/profile",
+                "src/main/res/layouts/settings",
+                "src/main/res/layouts/video",
                 "src/main/res"
             )
         }
@@ -48,27 +92,32 @@ android {
 }
 
 dependencies {
-    // 1. Core Android & UI
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.activity:activity-ktx:1.9.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("androidx.coordinatorlayout:coordinatorlayout:1.2.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
 
-    // 2. Networking (Retrofit + OkHttp)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    // 3. Coroutines (Background Tasks)
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("com.google.android.gms:play-services-location:21.2.0")
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
 
-    // 4. Lifecycle & ViewModel
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.0")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.0")
+    implementation(libs.androidx.activity)
 
-    // 5. Testing
+    implementation("com.google.android.flexbox:flexbox:3.0.0")
+    implementation("io.coil-kt:coil:2.6.0")
+    implementation("io.agora.rtc:full-sdk:4.3.0")
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

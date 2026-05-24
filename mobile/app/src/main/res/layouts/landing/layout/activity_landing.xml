@@ -3,52 +3,51 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F7F5"
-    android:fillViewport="true">
+    android:background="@drawable/bg_segmented_nav"
+    android:fillViewport="true"
+    android:overScrollMode="never">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingBottom="56dp">
+        android:orientation="vertical">
 
-        <!-- ══════════════════════════════════
-             NAVBAR
-             ══════════════════════════════════ -->
-        <RelativeLayout
+        <!-- NAVBAR -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="wrap_content"
             android:background="#FFFFFF"
-            android:paddingHorizontal="20dp"
-            android:elevation="3dp">
+            android:elevation="4dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="18dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="14dp">
 
-            <!-- Logo lockup -->
+            <!-- Brand row -->
             <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <!-- Logo mark: sage→lavender gradient + white heart -->
                 <FrameLayout
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
                     android:background="@drawable/bg_logo_mark">
 
                     <ImageView
-                        android:layout_width="22dp"
-                        android:layout_height="22dp"
+                        android:layout_width="21dp"
+                        android:layout_height="21dp"
                         android:layout_gravity="center"
-                        android:src="@drawable/ic_logo_heart"
-                        android:contentDescription="TheraPea logo" />
+                        android:contentDescription="TheraPea logo"
+                        android:src="@drawable/ic_logo_heart" />
                 </FrameLayout>
 
-                <!-- "Thera" plain + "Pea" in sage italic, matching web <em> -->
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
+                    android:layout_weight="1"
                     android:orientation="horizontal">
 
                     <TextView
@@ -56,110 +55,133 @@
                         android:layout_height="wrap_content"
                         android:text="Thera"
                         android:textColor="#1A1A2E"
-                        android:textSize="22sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="-0.03" />
+                        android:textSize="23sp"
+                        android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Pea"
-                        android:textColor="#8BA888"
-                        android:textSize="22sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="-0.03" />
+                        android:textColor="#7A9877"
+                        android:textSize="23sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:background="@drawable/bg_header_badge"
+                    android:gravity="center"
+                    android:paddingHorizontal="12dp"
+                    android:text="Secure Care"
+                    android:textColor="#7A9877"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- Login + Sign Up buttons -->
+            <!-- Action segmented row -->
             <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_marginTop="14dp"
+                android:background="@drawable/bg_segmented_nav"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:padding="4dp">
 
-                <!-- Login — ghost style -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnLogin"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="0dp"
                     android:layout_height="40dp"
-                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="#FFFFFF"
                     android:insetLeft="0dp"
                     android:insetTop="0dp"
                     android:insetRight="0dp"
                     android:insetBottom="0dp"
-                    android:paddingHorizontal="16dp"
                     android:text="Login"
                     android:textAllCaps="false"
                     android:textColor="#1A1A2E"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     app:cornerRadius="10dp"
-                    app:strokeColor="#E5E7EB"
-                    app:strokeWidth="1.5dp" />
+                    app:elevation="0dp" />
 
-                <!-- Sign Up — primary style -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnRegister"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="40dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="#7A9877"
                     android:insetLeft="0dp"
                     android:insetTop="0dp"
                     android:insetRight="0dp"
                     android:insetBottom="0dp"
-                    android:paddingHorizontal="16dp"
-                    android:backgroundTint="#7A9877"
                     android:text="Sign Up"
                     android:textAllCaps="false"
                     android:textColor="#FFFFFF"
                     android:textSize="13sp"
                     android:textStyle="bold"
                     app:cornerRadius="10dp"
-                    app:elevation="2dp" />
-            </LinearLayout>
-        </RelativeLayout>
+                    app:elevation="0dp" />
 
-        <!-- ══════════════════════════════════
-             HERO SECTION
-             ══════════════════════════════════ -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnReference"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="4dp"
+                    android:layout_weight="1.12"
+                    android:backgroundTint="#FFFFFF"
+                    android:insetLeft="0dp"
+                    android:insetTop="0dp"
+                    android:insetRight="0dp"
+                    android:insetBottom="0dp"
+                    android:text="Track"
+                    android:textAllCaps="false"
+                    android:textColor="#7A9877"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="10dp"
+                    app:elevation="0dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- HERO -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#EEF3EE"
+            android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:paddingHorizontal="24dp"
-            android:paddingTop="48dp"
-            android:paddingBottom="48dp">
+            android:paddingHorizontal="22dp"
+            android:paddingTop="46dp"
+            android:paddingBottom="46dp">
 
-            <!-- Trust badge (pill) -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
                 app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="999dp"
-                app:cardElevation="2dp"
+                app:cardCornerRadius="100dp"
+                app:cardElevation="1dp"
                 app:strokeColor="#E5E7EB"
-                app:strokeWidth="1.5dp">
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:paddingHorizontal="16dp"
-                    android:paddingVertical="8dp">
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="7dp">
 
-                    <!-- Pulse dot -->
                     <View
-                        android:layout_width="8dp"
-                        android:layout_height="8dp"
-                        android:background="@drawable/bg_btn_sage"
-                        android:backgroundTint="#10B981"
-                        android:layout_marginEnd="8dp" />
+                        android:layout_width="7dp"
+                        android:layout_height="7dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="#10B981" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -171,40 +193,37 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Hero headline -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="28dp"
+                android:fontFamily="serif"
+                android:gravity="center"
                 android:text="Find Your"
-                android:textAlignment="center"
                 android:textColor="#1A1A2E"
-                android:textSize="44sp"
-                android:textStyle="bold"
-                android:letterSpacing="-0.03" />
+                android:textSize="42sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:fontFamily="serif"
+                android:gravity="center"
                 android:text="Inner Peace"
-                android:textAlignment="center"
                 android:textColor="#7A9877"
-                android:textSize="44sp"
-                android:textStyle="italic|bold"
-                android:letterSpacing="-0.03" />
+                android:textSize="42sp"
+                android:textStyle="italic|bold" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
-                android:layout_marginHorizontal="8dp"
+                android:gravity="center"
+                android:lineSpacingExtra="5dp"
                 android:text="Connect with licensed mental health professionals through our secure telehealth platform. Start your journey to wellness today."
-                android:textAlignment="center"
                 android:textColor="#6B7280"
-                android:textSize="15sp"
-                android:lineSpacingExtra="6dp" />
+                android:textSize="15sp" />
 
-            <!-- CTAs -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnTriage"
                 android:layout_width="match_parent"
@@ -216,9 +235,8 @@
                 android:textColor="#FFFFFF"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:letterSpacing="-0.01"
                 app:cornerRadius="14dp"
-                app:elevation="4dp" />
+                app:elevation="2dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnHowItWorks"
@@ -233,13 +251,11 @@
                 android:textStyle="bold"
                 app:cornerRadius="14dp"
                 app:strokeColor="#D1D5DB"
-                app:strokeWidth="1.5dp" />
+                app:strokeWidth="1dp" />
 
-            <!-- Social proof row -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
                 android:layout_marginTop="24dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
@@ -262,9 +278,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- ══════════════════════════════════
-             BENTO CARDS
-             ══════════════════════════════════ -->
+        <!-- CONTENT CARDS -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -272,278 +286,146 @@
             android:paddingHorizontal="20dp"
             android:paddingTop="28dp">
 
-            <!-- Daily Reflection Card (wide) -->
+            <!-- Daily Reflection -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="14dp"
                 app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="3dp"
-                app:strokeColor="#F0F0F0"
+                app:cardCornerRadius="22dp"
+                app:cardElevation="2dp"
+                app:strokeColor="#EEF0EC"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="26dp">
+                    android:padding="24dp">
 
-                    <!-- Card header -->
-                    <RelativeLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_centerVertical="true"
-                            android:text="Daily Reflection"
-                            android:textColor="#1A1A2E"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="-0.01" />
-
-                        <!-- "Today" chip -->
-                        <com.google.android.material.card.MaterialCardView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true"
-                            app:cardBackgroundColor="#EEF5EE"
-                            app:cardCornerRadius="8dp"
-                            app:cardElevation="0dp"
-                            app:strokeWidth="0dp">
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal"
-                                android:paddingHorizontal="10dp"
-                                android:paddingVertical="5dp">
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="✦ "
-                                    android:textColor="#7A9877"
-                                    android:textSize="10sp" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Today"
-                                    android:textColor="#7A9877"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
-                            </LinearLayout>
-                        </com.google.android.material.card.MaterialCardView>
-                    </RelativeLayout>
-
-                    <!-- Divider -->
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginTop="16dp"
-                        android:background="#F3F4F6" />
-
-                    <!-- Quote text -->
-                    <TextView
-                        android:id="@+id/tvDailyQuote"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="18dp"
-                        android:text="&quot;Healing isn't linear — every small step you take is progress worth celebrating.&quot;"
-                        android:textColor="#1A1A2E"
-                        android:textSize="16sp"
-                        android:textStyle="italic|bold"
-                        android:lineSpacingExtra="6dp"
-                        android:letterSpacing="-0.01" />
-
-                    <!-- Breathing suggestion row -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
-                        app:cardBackgroundColor="#F9FAFB"
-                        app:cardCornerRadius="14dp"
-                        app:cardElevation="0dp"
-                        app:strokeColor="#EDEDED"
-                        app:strokeWidth="1dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:padding="14dp">
-
-                            <com.google.android.material.card.MaterialCardView
-                                android:layout_width="42dp"
-                                android:layout_height="42dp"
-                                app:cardBackgroundColor="#7A9877"
-                                app:cardCornerRadius="12dp"
-                                app:cardElevation="3dp">
-
-                                <TextView
-                                    android:layout_width="match_parent"
-                                    android:layout_height="match_parent"
-                                    android:gravity="center"
-                                    android:text="♥"
-                                    android:textColor="#FFFFFF"
-                                    android:textSize="18sp" />
-                            </com.google.android.material.card.MaterialCardView>
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="12dp"
-                                android:layout_weight="1"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="5-minute guided breathing"
-                                    android:textColor="#1A1A2E"
-                                    android:textSize="13sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:text="Recommended for you"
-                                    android:textColor="#9CA3AF"
-                                    android:textSize="12sp" />
-                            </LinearLayout>
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="→"
-                                android:textColor="#C4D3C3"
-                                android:textSize="18sp" />
-                        </LinearLayout>
-                    </com.google.android.material.card.MaterialCardView>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Wellness Progress Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
-                app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="3dp"
-                app:strokeColor="#F0F0F0"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="26dp">
-
-                    <!-- Header row -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <com.google.android.material.card.MaterialCardView
-                            android:layout_width="38dp"
-                            android:layout_height="38dp"
-                            android:layout_marginEnd="12dp"
-                            app:cardBackgroundColor="#EEF5EE"
-                            app:cardCornerRadius="10dp"
-                            app:cardElevation="0dp">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:gravity="center"
-                                android:text="📈"
-                                android:textSize="16sp" />
-                        </com.google.android.material.card.MaterialCardView>
-
                         <TextView
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Wellness Progress"
+                            android:text="Daily Reflection"
                             android:textColor="#1A1A2E"
-                            android:textSize="15sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="-0.01" />
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
 
-                        <com.google.android.material.card.MaterialCardView
+                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            app:cardBackgroundColor="#FFF9EC"
-                            app:cardCornerRadius="8dp"
-                            app:cardElevation="0dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:paddingHorizontal="10dp"
-                                android:paddingVertical="4dp"
-                                android:text="This week"
-                                android:textColor="#D97706"
-                                android:textSize="11sp"
-                                android:textStyle="bold" />
-                        </com.google.android.material.card.MaterialCardView>
+                            android:background="@drawable/bg_header_badge"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="5dp"
+                            android:text="Today"
+                            android:textColor="#7A9877"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
 
-                    <View
+                    <TextView
+                        android:id="@+id/tvDailyQuote"
                         android:layout_width="match_parent"
-                        android:layout_height="1dp"
+                        android:layout_height="wrap_content"
                         android:layout_marginTop="18dp"
-                        android:layout_marginBottom="18dp"
-                        android:background="#F3F4F6" />
+                        android:lineSpacingExtra="6dp"
+                        android:text="“Healing isn't linear — every small step you take is progress worth celebrating.”"
+                        android:textColor="#1A1A2E"
+                        android:textSize="16sp"
+                        android:textStyle="italic|bold" />
 
-                    <!-- Mood -->
-                    <RelativeLayout
+                    <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:background="#F9FAFB"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="14dp">
+
+                        <TextView
+                            android:layout_width="42dp"
+                            android:layout_height="42dp"
+                            android:background="#7A9877"
+                            android:gravity="center"
+                            android:text="♥"
+                            android:textColor="#FFFFFF"
+                            android:textSize="18sp" />
 
                         <LinearLayout
-                            android:layout_width="wrap_content"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_centerVertical="true"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="😊"
-                                android:textSize="14sp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
-                                android:text="Mood"
-                                android:textColor="#6B7280"
+                                android:text="5-minute guided breathing"
+                                android:textColor="#1A1A2E"
                                 android:textSize="13sp"
                                 android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Recommended for you"
+                                android:textColor="#9CA3AF"
+                                android:textSize="12sp" />
                         </LinearLayout>
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true"
-                            android:text="72%"
-                            android:textColor="#1A1A2E"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-                    </RelativeLayout>
+                            android:text="→"
+                            android:textColor="#7A9877"
+                            android:textSize="18sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Wellness Progress -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="22dp"
+                app:cardElevation="2dp"
+                app:strokeColor="#EEF0EC"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Wellness Progress"
+                        android:textColor="#1A1A2E"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:text="Mood 72%"
+                        android:textColor="#6B7280"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
 
                     <ProgressBar
                         style="?android:attr/progressBarStyleHorizontal"
@@ -551,48 +433,16 @@
                         android:layout_height="8dp"
                         android:layout_marginTop="8dp"
                         android:progress="72"
-                        android:progressBackgroundTint="#F3F4F6"
                         android:progressTint="#8BA888" />
 
-                    <!-- Sleep -->
-                    <RelativeLayout
+                    <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="18dp">
-
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_centerVertical="true"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="🌙"
-                                android:textSize="14sp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
-                                android:text="Sleep"
-                                android:textColor="#6B7280"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true"
-                            android:text="58%"
-                            android:textColor="#1A1A2E"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-                    </RelativeLayout>
+                        android:layout_marginTop="18dp"
+                        android:text="Sleep 58%"
+                        android:textColor="#6B7280"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
 
                     <ProgressBar
                         style="?android:attr/progressBarStyleHorizontal"
@@ -600,48 +450,39 @@
                         android:layout_height="8dp"
                         android:layout_marginTop="8dp"
                         android:progress="58"
-                        android:progressBackgroundTint="#F3F4F6"
                         android:progressTint="#A78BFA" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- HIPAA Card -->
+            <!-- Secure Card -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="3dp"
-                app:strokeColor="#F0F0F0"
+                app:cardCornerRadius="22dp"
+                app:cardElevation="2dp"
+                app:strokeColor="#EEF0EC"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="24dp">
+                    android:padding="22dp">
 
-                    <!-- Shield icon container -->
-                    <com.google.android.material.card.MaterialCardView
+                    <TextView
                         android:layout_width="52dp"
                         android:layout_height="52dp"
-                        android:layout_marginEnd="16dp"
-                        app:cardBackgroundColor="#EDE9FE"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="0dp">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:text="🔒"
-                            android:textSize="22sp" />
-                    </com.google.android.material.card.MaterialCardView>
+                        android:background="#EDE9FE"
+                        android:gravity="center"
+                        android:text="🔒"
+                        android:textSize="22sp" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
                         android:layout_weight="1"
                         android:orientation="vertical">
 
@@ -651,8 +492,7 @@
                             android:text="HIPAA Secure"
                             android:textColor="#1A1A2E"
                             android:textSize="16sp"
-                            android:textStyle="bold"
-                            android:letterSpacing="-0.01" />
+                            android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -663,31 +503,21 @@
                             android:textSize="13sp" />
                     </LinearLayout>
 
-                    <!-- Verified badge -->
-                    <com.google.android.material.card.MaterialCardView
+                    <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        app:cardBackgroundColor="#EDE9FE"
-                        app:cardCornerRadius="8dp"
-                        app:cardElevation="0dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:paddingHorizontal="10dp"
-                            android:paddingVertical="4dp"
-                            android:text="✓ Verified"
-                            android:textColor="#7C3AED"
-                            android:textSize="11sp"
-                            android:textStyle="bold" />
-                    </com.google.android.material.card.MaterialCardView>
+                        android:background="#EDE9FE"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="5dp"
+                        android:text="✓ Verified"
+                        android:textColor="#7C3AED"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- ══════════════════════════════════
-             CRISIS BANNER
-             ══════════════════════════════════ -->
+        <!-- CRISIS BANNER -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -697,158 +527,91 @@
             android:paddingHorizontal="24dp"
             android:paddingVertical="20dp">
 
-            <!-- Top border accent -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="3dp"
-                android:layout_marginBottom="16dp"
-                android:background="#FCA5A5"
-                android:alpha="0.6" />
-
-            <LinearLayout
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <!-- Alert icon -->
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_marginEnd="12dp"
-                    app:cardBackgroundColor="#FEE2E2"
-                    app:cardCornerRadius="10dp"
-                    app:cardElevation="0dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:text="⚠"
-                        android:textColor="#DC2626"
-                        android:textSize="16sp" />
-                </com.google.android.material.card.MaterialCardView>
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="If you are in crisis, call or text 988 (Suicide &amp; Crisis Lifeline) or visit your nearest emergency room."
-                    android:textColor="#DC2626"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:lineSpacingExtra="3dp" />
-            </LinearLayout>
+                android:lineSpacingExtra="3dp"
+                android:text="⚠ If you are in crisis, call or text 988 (Suicide &amp; Crisis Lifeline) or visit your nearest emergency room."
+                android:textColor="#DC2626"
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:layout_marginStart="48dp"
                 android:text="View Crisis Resources →"
                 android:textColor="#DC2626"
                 android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- ══════════════════════════════════
-             CTA CARD
-             ══════════════════════════════════ -->
+        <!-- CTA -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="20dp"
-            android:paddingTop="32dp">
+            android:paddingTop="32dp"
+            android:paddingBottom="56dp">
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="#7A9877"
-                app:cardCornerRadius="28dp"
-                app:cardElevation="10dp">
+                app:cardCornerRadius="26dp"
+                app:cardElevation="6dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="center"
                     android:orientation="vertical"
-                    android:padding="32dp"
-                    android:gravity="center">
-
-                    <!-- Decorative icon -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="52dp"
-                        android:layout_height="52dp"
-                        android:layout_marginBottom="20dp"
-                        app:cardBackgroundColor="#8DB88A"
-                        app:cardCornerRadius="16dp"
-                        app:cardElevation="0dp">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:gravity="center"
-                            android:text="✨"
-                            android:textSize="24sp" />
-                    </com.google.android.material.card.MaterialCardView>
+                    android:padding="32dp">
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:gravity="center"
                         android:text="Ready to begin your journey?"
-                        android:textAlignment="center"
-                        android:textColor="#FFFFFF"
+                        android:textColor="#8BA888"
                         android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="-0.02"
-                        android:lineSpacingExtra="3dp" />
+                        android:textStyle="bold" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:layout_marginHorizontal="8dp"
+                        android:gravity="center"
+                        android:lineSpacingExtra="5dp"
                         android:text="Take the first step toward better mental health. Our triage assessment takes just 10 minutes."
-                        android:textAlignment="center"
-                        android:textColor="#D4E8D3"
-                        android:textSize="14sp"
-                        android:lineSpacingExtra="5dp" />
-
-                    <!-- Divider -->
-                    <View
-                        android:layout_width="48dp"
-                        android:layout_height="1dp"
-                        android:layout_marginTop="20dp"
-                        android:background="#FFFFFF"
-                        android:alpha="0.3" />
+                        android:textColor="#8BA888"
+                        android:textSize="14sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnCtaGetStarted"
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
-                        android:layout_marginTop="20dp"
+                        android:layout_marginTop="22dp"
                         android:backgroundTint="#FFFFFF"
                         android:text="Get started now →"
                         android:textAllCaps="false"
                         android:textColor="#7A9877"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        android:letterSpacing="-0.01"
                         app:cornerRadius="14dp"
-                        app:elevation="4dp" />
+                        app:elevation="2dp" />
 
-                    <!-- Trust note -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:text="🔒  No credit card required · Free assessment"
-                        android:textColor="#C5DCC4"
+                        android:text="🔒 No credit card required · Free assessment"
+                        android:textColor="#8BA888"
                         android:textSize="12sp"
                         android:textStyle="bold" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
-
     </LinearLayout>
 </ScrollView>

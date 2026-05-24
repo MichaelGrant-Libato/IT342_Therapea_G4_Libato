@@ -57,7 +57,7 @@ html, body, #root {
 .left-logo-text { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: -0.03em; }
 .left-content { position: relative; z-index: 1; }
 .left-content h2 {
-  font-size: 36px; font-weight: 800; color: #fff;
+  font-size: 36px; font-weight: 800; color:   #fff;
   letter-spacing: -0.04em; line-height: 1.15; margin-bottom: 16px;
 }
 .left-content p {

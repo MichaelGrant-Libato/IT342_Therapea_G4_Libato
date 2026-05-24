@@ -1,10 +1,12 @@
 package com.therapea.app.core.network
 
+import com.therapea.app.BuildConfig
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
+
 object ApiClient {
-    private const val BASE_URL = "http://10.0.2.2:8083/api/"
+    private const val BASE_URL = BuildConfig.BASE_URL
 
     val authService: AuthApiService by lazy {
         Retrofit.Builder()
