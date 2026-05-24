@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="bottom"
+    android:background="@drawable/bg_nav_header"> <androidx.cardview.widget.CardView
+    android:layout_width="64dp"
+    android:layout_height="64dp"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="32dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="@android:color/white"> <FrameLayout
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/tvNavHeaderInitials"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_avatar_circle_primary"
+        android:gravity="center"
+        android:textColor="@android:color/white"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <ImageView
+        android:id="@+id/ivNavHeaderAvatar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="Profile Avatar"
+        android:scaleType="centerCrop" />
+</FrameLayout>
+</androidx.cardview.widget.CardView>
+
+    <TextView
+        android:id="@+id/tvNavHeaderName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white" android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvNavHeaderEmail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#E0FFFFFF" android:textSize="14sp" />
+</LinearLayout>

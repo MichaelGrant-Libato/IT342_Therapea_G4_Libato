@@ -1,9 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="sage_green">#8BA888</color>
-    <color name="sage_green_dark">#718D6F</color> <color name="soft_lavender">#A78BFA</color>
-    <color name="warm_off_white">#F9FAFB</color>
-    <color name="surface_white">#FFFFFF</color>
-    <color name="dark_gray">#1F2937</color>
-    <color name="muted_gray">#6B7280</color>
-    <color name="border_gray">#E5E7EB</color>
+    <color name="primary">#7A9E78</color>
+    <color name="primary_light">#EEF4EE</color>
+    <color name="primary_dark">#527050</color>
+
+    <color name="secondary">#9B7FD4</color>
+    <color name="secondary_light">#F0EBFB</color>
+
+    <color name="amber">#D97706</color>
+    <color name="amber_light">#FFFBEB</color>
+    <color name="teal">#0D9488</color>
+    <color name="teal_light">#F0FDFA</color>
+
+    <color name="bg">#F5F6F2</color>
+    <color name="bg_alt">#EEEEE9</color>
+    <color name="surface">#FFFFFF</color>
+
+    <color name="text_main">#1C1F1A</color>
+    <color name="text_sub">#4A5047</color>
+    <color name="text_muted">#7A8077</color>
+    <color name="white">#FEFEFE</color>
+
+    <color name="border_main">#E4E6DF</color>
+    <color name="border_subtle">#ECEEE8</color>
+
+    <color name="alert_bg">#FEF2F2</color>
+    <color name="alert_text">#991B1B</color>
+    <color name="alert_border">#FECACA</color>
 </resources>

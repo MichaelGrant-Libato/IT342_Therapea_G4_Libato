@@ -6,7 +6,9 @@ import android.os.Bundle
 import android.widget.Toast
 import com.google.android.material.button.MaterialButton
 import com.therapea.app.R
+import com.therapea.app.features.assessment.AssessmentActivity
 import com.therapea.app.features.auth.LoginActivity
+import com.therapea.app.features.auth.ReferenceActivity
 import com.therapea.app.features.auth.RegisterActivity
 
 class LandingActivity : Activity() {
@@ -14,7 +16,6 @@ class LandingActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_landing)
 
-        // Navbar
         findViewById<MaterialButton>(R.id.btnLogin).setOnClickListener {
             startActivity(Intent(this, LoginActivity::class.java))
         }
@@ -23,16 +24,18 @@ class LandingActivity : Activity() {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
 
-        // Hero
+        findViewById<MaterialButton>(R.id.btnReference).setOnClickListener {
+            startActivity(Intent(this, ReferenceActivity::class.java))
+        }
+
         findViewById<MaterialButton>(R.id.btnTriage).setOnClickListener {
-            Toast.makeText(this, "Triage Assessment coming soon", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, AssessmentActivity::class.java))
         }
 
         findViewById<MaterialButton>(R.id.btnHowItWorks).setOnClickListener {
             Toast.makeText(this, "Scroll to How It Works", Toast.LENGTH_SHORT).show()
         }
 
-        // Bottom CTA — also goes to register
         findViewById<MaterialButton>(R.id.btnCtaGetStarted).setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }

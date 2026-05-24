@@ -81,8 +81,37 @@ const Appointments: React.FC = () => {
     } catch (err) { console.error("Delete fail:", err); } finally { setDeleteTargetId(null); setIsDeleting(false); }
   };
 
-  const upcomingAppointments = appointments.filter(a => a.status === 'Scheduled');
-  const pastAppointments = appointments.filter(a => a.status === 'Completed' || a.status === 'Canceled');
+  // --- NEW LOGIC: Check if appointment has passed the current date/time ---
+  const isAppointmentPast = (dateStr: string, timeStr: string) => {
+    const now = new Date();
+    const aptDateTime = new Date(`${dateStr} ${timeStr}`);
+    
+    // If it parsed successfully, compare exact times
+    if (!isNaN(aptDateTime.getTime())) {
+      return aptDateTime < now;
+    }
+    // Fallback if the time string formatting is weird: Just check the date end-of-day
+    const aptDate = new Date(dateStr);
+    aptDate.setHours(23, 59, 59, 999);
+    return aptDate < now;
+  };
+
+  // --- NEW LOGIC: Check if format is online/video ---
+  const isOnlineFormat = (type: string) => {
+    const t = type.toLowerCase();
+    return t.includes('telehealth') || t.includes('online') || t.includes('video');
+  };
+
+  // Apply the time-check to the filters
+  const upcomingAppointments = appointments.filter(a => 
+    a.status === 'Scheduled' && !isAppointmentPast(a.date, a.time)
+  );
+  const pastAppointments = appointments.filter(a => 
+    a.status === 'Completed' || 
+    a.status === 'Canceled' || 
+    (a.status === 'Scheduled' && isAppointmentPast(a.date, a.time))
+  );
+  
   const displayedAppointments = activeTab === 'upcoming' ? upcomingAppointments : pastAppointments;
 
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
@@ -133,6 +162,8 @@ const Appointments: React.FC = () => {
                 {blanks.map(b => <div key={`b-${b}`} className="co-cal-day empty" />)}
                 {days.map(d => {
                   const dateStr = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                  // Only show events that haven't passed in the calendar as "upcoming" dots, or show all? 
+                  // Keeping your original logic to just show Scheduled. 
                   const dayApts = appointments.filter(a => a.date === dateStr && a.status === 'Scheduled');
                   const hasApts = dayApts.length > 0;
 
@@ -153,20 +184,33 @@ const Appointments: React.FC = () => {
             {selectedDayApts && (
               <div className="doc-selected-day-list animate-in">
                 <h3 className="doc-selected-title">Appointments for {selectedDayApts[0].date}</h3>
-                {selectedDayApts.map(apt => (
-                  <div key={apt.id} className="appt-card-item" onClick={() => setSelectedAppointment(apt)}>
-                    <div className="appt-info">
-                      <div className="appt-name-row">
-                        <h2>{apt.patientName}</h2>
-                        <span className={`status-badge ${apt.status.toLowerCase()}`}>{apt.status}</span>
+                {selectedDayApts.map(apt => {
+                  const isOnline = isOnlineFormat(apt.type);
+                  const isPast = isAppointmentPast(apt.date, apt.time);
+
+                  return (
+                    <div key={apt.id} className="appt-card-item" onClick={() => setSelectedAppointment(apt)}>
+                      <div className="appt-info">
+                        <div className="appt-name-row">
+                          <h2>{apt.patientName}</h2>
+                          <span className={`status-badge ${isPast ? 'completed' : apt.status.toLowerCase()}`}>
+                            {isPast ? 'Passed' : apt.status}
+                          </span>
+                        </div>
+                        <p className="appt-meta">{apt.time} • {apt.type}</p>
                       </div>
-                      <p className="appt-meta">{apt.time} • {apt.type}</p>
+                      <div className="appt-actions">
+                        {isOnline && !isPast ? (
+                          <button className="appt-btn-primary" onClick={(e) => { e.stopPropagation(); navigate('/video-room'); }}>Join Video</button>
+                        ) : isOnline && isPast ? (
+                          <span style={{ padding: '8px 16px', backgroundColor: '#E2E8F0', color: '#94A3B8', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold' }}>Video Ended</span>
+                        ) : (
+                          <span style={{ padding: '8px 16px', backgroundColor: '#F1F5F9', color: '#64748B', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold' }}>Clinic / On-Site</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="appt-actions">
-                      <button className="appt-btn-primary" onClick={(e) => { e.stopPropagation(); navigate('/video-room'); }}>Join Video</button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -180,37 +224,55 @@ const Appointments: React.FC = () => {
                 <p>{activeTab === 'upcoming' ? "No upcoming appointments." : "No past sessions."}</p>
               </div>
             ) : (
-              displayedAppointments.map((apt) => (
-                <div key={apt.id} className="appt-card-item" onClick={() => setSelectedAppointment(apt)}>
-                  <div className="appt-info">
-                    <div className="appt-name-row">
-                      <h2>{userRole === 'DOCTOR' ? apt.patientName : apt.providerName}</h2>
-                      <span className={`status-badge ${apt.status.toLowerCase()}`}>{apt.status}</span>
-                    </div>
-                    <p className="appt-meta">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                      {apt.date} at {apt.time} • {apt.type}
-                    </p>
-                  </div>
+              displayedAppointments.map((apt) => {
+                const isOnline = isOnlineFormat(apt.type);
 
-                  <div className="appt-actions">
-                    {activeTab === 'upcoming' && (
-                      <>
-                        {userRole === 'PATIENT' && <button className="appt-btn-outline" onClick={(e) => { e.stopPropagation(); setCancelTargetId(apt.id); }}>Cancel</button>}
-                        <button className="appt-btn-primary" onClick={(e) => { e.stopPropagation(); navigate('/video-room'); }}>Join Video</button>
-                      </>
-                    )}
-                    {activeTab === 'past' && (
-                      <>
-                        <button className="appt-btn-outline" onClick={(e) => { e.stopPropagation(); }}>{userRole === 'DOCTOR' ? 'Write Notes' : 'View Notes'}</button>
-                        <button className="appt-btn-icon-delete" onClick={(e) => { e.stopPropagation(); setDeleteTargetId(apt.id); }} title="Delete from history">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                        </button>
-                      </>
-                    )}
+                return (
+                  <div key={apt.id} className="appt-card-item" onClick={() => setSelectedAppointment(apt)}>
+                    <div className="appt-info">
+                      <div className="appt-name-row">
+                        <h2>{userRole === 'DOCTOR' ? apt.patientName : apt.providerName}</h2>
+                        {/* If it was marked Scheduled but moved to past, label it visually as 'Passed' */}
+                        <span className={`status-badge ${activeTab === 'past' && apt.status === 'Scheduled' ? 'completed' : apt.status.toLowerCase()}`}>
+                          {activeTab === 'past' && apt.status === 'Scheduled' ? 'Passed' : apt.status}
+                        </span>
+                      </div>
+                      <p className="appt-meta">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                        {apt.date} at {apt.time} • {apt.type}
+                      </p>
+                    </div>
+
+                    <div className="appt-actions">
+                      {activeTab === 'upcoming' && (
+                        <>
+                          {userRole === 'PATIENT' && <button className="appt-btn-outline" onClick={(e) => { e.stopPropagation(); setCancelTargetId(apt.id); }}>Cancel</button>}
+                          
+                          {/* Conditional Video / Clinic logic */}
+                          {isOnline ? (
+                            <button className="appt-btn-primary" onClick={(e) => { e.stopPropagation(); navigate('/video-room'); }}>Join Video</button>
+                          ) : (
+                            <span style={{ padding: '8px 16px', backgroundColor: '#F1F5F9', color: '#64748B', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold' }}>Clinic / On-Site</span>
+                          )}
+                        </>
+                      )}
+                      
+                      {activeTab === 'past' && (
+                        <>
+                          {/* Show disabled button if it was an online format */}
+                          {isOnline && (
+                            <button className="appt-btn-primary disabled" disabled style={{ opacity: 0.5, cursor: 'not-allowed' }}>Video Ended</button>
+                          )}
+                          <button className="appt-btn-outline" onClick={(e) => { e.stopPropagation(); }}>{userRole === 'DOCTOR' ? 'Write Notes' : 'View Notes'}</button>
+                          <button className="appt-btn-icon-delete" onClick={(e) => { e.stopPropagation(); setDeleteTargetId(apt.id); }} title="Delete from history">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}

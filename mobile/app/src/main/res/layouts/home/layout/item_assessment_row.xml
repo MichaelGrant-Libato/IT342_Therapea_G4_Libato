@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- item_assessment_row.xml
+     Inflated dynamically into llAssessmentsList (Patient dashboard) -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <!-- Thin divider — hidden for the first item via code -->
+    <View
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/bg"
+        android:layout_marginBottom="14dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="14dp">
+
+        <!-- Left: date + type stacked -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvAssessmentDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="May 9, 2026"
+                android:textColor="@color/text_muted"
+                android:textSize="12sp"/>
+
+            <TextView
+                android:id="@+id/tvAssessmentType"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="Triage Assessment"
+                android:textColor="@color/text_main"
+                android:textSize="14sp"
+                android:textStyle="bold"/>
+        </LinearLayout>
+
+        <!-- Centre: risk badge -->
+        <TextView
+            android:id="@+id/tvRiskBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            android:text="High · 100"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_badge_red"/>
+
+        <!-- Right: status badge -->
+        <TextView
+            android:id="@+id/tvStatusBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            android:text="Pending"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:background="@drawable/bg_badge_gray"/>
+
+        <!-- Actions: view + delete -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/btnViewAssessment"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:padding="7dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:src="@android:drawable/ic_menu_view"
+                app:tint="@color/text_sub"/>
+
+            <ImageView
+                android:id="@+id/btnDeleteAssessment"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:padding="7dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:src="@android:drawable/ic_menu_delete"
+                app:tint="#EF4444"/>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
