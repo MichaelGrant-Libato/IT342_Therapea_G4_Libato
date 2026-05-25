@@ -54,7 +54,7 @@ public class SecurityConfig {
                 "http://10.0.2.2:8083",
                 "http://localhost:8083",
                 "http://10.0.2.2",
-                "https://it342-therapea-g4-libato.onrender.com" // ◄ Live Frontend URL
+                "https://therapea-theta.vercel.app/"
         ));
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
