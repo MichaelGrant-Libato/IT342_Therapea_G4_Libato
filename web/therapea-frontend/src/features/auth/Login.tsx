@@ -66,35 +66,6 @@ const Login: React.FC = () => {
     }
   }, [navigate]);
 
-  // Direct production Google authentication handler parses directly to Spring Boot backend controller logic
-  const handleGoogleCredentialResponse = async (response: any) => {
-    setIsLoading(true); setError(''); setSuccess('');
-    try {
-      const token = response.credential;
-      setStoredIdToken(token); // Save the signature globally for step 2 verification parsing
-
-      const res = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: token }),
-      });
-
-      const data = await res.json();
-
-      // Intercept profile match or 404 tracking step and route smoothly into your OTP prompt chain
-      if (res.ok || (res.status === 200 && data.email) || (res.status === 404 && data.email)) {
-        setGoogleEmail(data.email);
-        sendOtp(data.email, 'LOGIN');
-      } else {
-        setError(data.error || 'Google verification routing error.');
-      }
-    } catch {
-      setError('Failed to process Google sign-in. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // ─── INITIALIZE GOOGLE ONCE ───
   useEffect(() => {
     if (googleInitialized.current) return;
@@ -109,12 +80,24 @@ const Login: React.FC = () => {
         itp_support: true,
       });
 
+      // Render an invisible Google-managed button that handles FedCM properly
+      const container = document.getElementById('google-signin-btn-hidden');
+      if (container) {
+        (window as any).google.accounts.id.renderButton(container, {
+          theme: 'outline',
+          size: 'large',
+          type: 'standard',
+        });
+      }
+
       googleInitialized.current = true;
     };
 
+    // If the Google script is already loaded, init immediately
     if ((window as any).google) {
       initGoogle();
     } else {
+      // Otherwise wait for it to load
       const interval = setInterval(() => {
         if ((window as any).google) {
           clearInterval(interval);
@@ -234,19 +217,49 @@ const Login: React.FC = () => {
     finally { setIsLoading(false); }
   };
 
-  // Safe programmatic prompt window trigger linked directly to your beautiful custom button style
-  const triggerGooglePopup = () => {
-    if ((window as any).google) {
-      // Re-initialize cleanly on explicit user tap action to refresh the token context and prevent thread lockups
-      (window as any).google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
-        callback: handleGoogleCredentialResponse,
-        ux_mode: "popup",
-        itp_support: true,
+  const handleGoogleCredentialResponse = async (response: any) => {
+    setIsLoading(true); setError(''); setSuccess('');
+    try {
+      const token = response.credential;
+      setStoredIdToken(token);
+
+      const res = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: token }),
       });
-      (window as any).google.accounts.id.prompt();
+
+      const data = await res.json();
+
+      if (res.ok || (res.status === 200 && data.email)) {
+        setGoogleEmail(data.email);
+        sendOtp(data.email, 'LOGIN');
+      } else if (res.status === 404 && data.email) {
+        setGoogleEmail(data.email);
+        sendOtp(data.email, 'LOGIN');
+      } else {
+        setError(data.error || 'Google verification routing error.');
+      }
+    } catch {
+      setError('Failed to process Google sign-in. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ─── Trigger the hidden Google-rendered button (avoids FedCM prompt() issue) ───
+  const triggerGooglePopup = () => {
+    const iframe = document.querySelector('#google-signin-btn-hidden iframe') as HTMLElement | null;
+    if (iframe) {
+      iframe.click();
     } else {
-      setError("Google authentication service is loading. Please wait a moment and try again.");
+      // Fallback: try the div itself
+      const btn = document.querySelector('#google-signin-btn-hidden div[role="button"]') as HTMLElement | null;
+      if (btn) {
+        btn.click();
+      } else {
+        setError("Google sign-in is not ready yet. Please wait a moment and try again.");
+      }
     }
   };
 
@@ -541,7 +554,25 @@ const Login: React.FC = () => {
                   <div className="divider-line"/>
                 </div>
 
-                {/* Visible custom-styled button that safely calls the public prompt window */}
+                {/*
+                  Hidden div where Google renders its own button element.
+                  This is positioned off-screen but still mounted in the DOM so
+                  Google's SDK can render into it. We programmatically click it
+                  to avoid calling prompt() which triggers the FedCM warning.
+                */}
+                <div
+                  id="google-signin-btn-hidden"
+                  style={{
+                    position: 'absolute',
+                    width: '1px',
+                    height: '1px',
+                    overflow: 'hidden',
+                    opacity: 0,
+                    pointerEvents: 'none',
+                  }}
+                />
+
+                {/* Visible custom-styled button that delegates click to the hidden Google button */}
                 <button
                   type="button"
                   onClick={triggerGooglePopup}
