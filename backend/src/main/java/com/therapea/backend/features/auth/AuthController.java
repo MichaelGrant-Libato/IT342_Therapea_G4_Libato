@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.Collections;
 import java.util.Map;
@@ -40,8 +41,8 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private final Dotenv dotenv = Dotenv.load();
-    private final String GOOGLE_CLIENT_ID = dotenv.get("GOOGLE_CLIENT_ID");
+    @Value("${GOOGLE_CLIENT_ID}")
+    private String GOOGLE_CLIENT_ID;
 
     @PostMapping("/send-otp")
     public ResponseEntity<?> sendOtp(@RequestBody Map<String, String> request) {
