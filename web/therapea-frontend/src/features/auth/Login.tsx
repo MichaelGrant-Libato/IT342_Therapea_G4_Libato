@@ -198,7 +198,6 @@ const Login: React.FC = () => {
         setSuccess('Google Login successful! Redirecting...');
         setTimeout(() => handleRoleBasedNavigation(data.role), 1500);
       } else {
-        // Handle explicit account tracking falls when profile data does not yet exist
         if (res.status === 404 && data.email) {
           setGoogleEmail(data.email);
           sendOtp(data.email, 'LOGIN');
@@ -219,6 +218,7 @@ const Login: React.FC = () => {
       (window as any).google.accounts.id.initialize({
         client_id: "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
         callback: handleGoogleCredentialResponse,
+        itp_support: true // Bypasses Intelligent Tracking Prevention and rigid cookie limitations natively
       });
     }
   }, []);
