@@ -172,7 +172,7 @@ const Login: React.FC = () => {
     finally { setIsLoading(false); }
   };
 
-  const handleGoogleLogin = async () => {
+const handleGoogleLogin = async () => {
     setIsLoading(true); setError(''); setSuccess('');
     try {
       const res  = await fetch(`${API_BASE_URL}/api/auth/google-register-url`);
@@ -184,9 +184,25 @@ const Login: React.FC = () => {
         if (!popup) { setError('Popup blocked.'); setIsLoading(false); return; }
 
         const handleMessage = async (event: MessageEvent) => {
-          if (event.origin !== API_BASE_URL) return;
+          // Allowed security origins list (Backend and Google authentication nodes)
+          const allowedOrigins = [
+            API_BASE_URL,
+            'https://accounts.google.com',
+            window.location.origin
+          ];
+
+          if (!allowedOrigins.includes(event.origin)) {
+            console.log("Blocked cross-origin token attempt from origin:", event.origin);
+            return; 
+          }
+
+          // Ignore empty messages or non-auth packages
+          if (!event.data || !event.data.type) return;
+
           window.removeEventListener('message', handleMessage);
           setIsLoading(false);
+          
+          if (popup && !popup.closed) popup.close(); // Automatically close the login popup frame
 
           const { type, email } = event.data;
           if (type === 'error') { setError('Google sign-in failed.'); return; }
