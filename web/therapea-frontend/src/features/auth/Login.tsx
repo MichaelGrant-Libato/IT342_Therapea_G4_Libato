@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import "./Login.css";
 
@@ -14,19 +14,19 @@ const Login: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false);
 
   // Google OTP State
-  const [googleEmail, setGoogleEmail]       = useState('');
-  const [showOtpFlow, setShowOtpFlow]       = useState(false);
-  const [otpCode, setOtpCode]               = useState('');
-  const [storedIdToken, setStoredIdToken]   = useState('');
+  const [googleEmail, setGoogleEmail]     = useState('');
+  const [showOtpFlow, setShowOtpFlow]     = useState(false);
+  const [otpCode, setOtpCode]             = useState('');
 
   // FORGOT PASSWORD MODAL STATE
-  const [forgotStep, setForgotStep]             = useState(0);
-  const [forgotEmail, setForgotEmail]           = useState('');
-  const [newPassword, setNewPassword]           = useState('');
-  const [confirmPassword, setConfirmPassword]   = useState('');
-  const [modalError, setModalError]             = useState('');
-  const [modalSuccess, setModalSuccess]         = useState('');
+  const [forgotStep, setForgotStep]           = useState(0);
+  const [forgotEmail, setForgotEmail]         = useState('');
+  const [newPassword, setNewPassword]         = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [modalError, setModalError]           = useState('');
+  const [modalSuccess, setModalSuccess]       = useState('');
 
+  const googleClientRef = useRef<any>(null);
   const googleInitialized = useRef(false);
 
   const parseError = async (res: Response, preParsedData?: any) => {
@@ -65,11 +65,11 @@ const Login: React.FC = () => {
     }
   }, [navigate]);
 
-  const handleGoogleCredentialResponse = async (response: any) => {
+  // ─── Stable callback ref so Google always calls the latest version ───
+  const handleGoogleCredentialResponse = useCallback(async (response: any) => {
     setIsLoading(true); setError(''); setSuccess('');
     try {
       const token = response.credential;
-      setStoredIdToken(token); 
 
       const res = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
         method: 'POST',
@@ -82,6 +82,9 @@ const Login: React.FC = () => {
       if (res.ok || res.status === 200) {
         setGoogleEmail(data.email);
         sendOtp(data.email, 'LOGIN');
+      } else if (res.status === 404 && data.email) {
+        setGoogleEmail(data.email);
+        sendOtp(data.email, 'LOGIN');
       } else {
         setError(data.error || 'Google verification routing error.');
       }
@@ -90,35 +93,22 @@ const Login: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [API_BASE_URL]);
 
-  // ─── INITIALIZE AND RENDER OFFICIAL GOOGLE BUTTON ───
+  // ─── Initialize Google ONCE using accounts.id (popup mode, no renderButton) ───
   useEffect(() => {
     if (googleInitialized.current) return;
 
     const initGoogle = () => {
-      if (!(window as any).google) return;
+      const g = (window as any).google;
+      if (!g) return;
 
-      (window as any).google.accounts.id.initialize({
+      g.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
         callback: handleGoogleCredentialResponse,
-        ux_mode: "popup",
-        itp_support: true,
+        ux_mode: 'popup',
+        cancel_on_tap_outside: true,
       });
-
-      // Render the official, standard popup button (Bypasses One Tap FedCM limits)
-      const btnContainer = document.getElementById("google-signin-button");
-      if (btnContainer) {
-        (window as any).google.accounts.id.renderButton(btnContainer, {
-          theme: "outline",
-          size: "large",
-          type: "standard",
-          shape: "rectangular",
-          text: "signin_with",
-          logo_alignment: "left",
-          width: btnContainer.clientWidth || 350
-        });
-      }
 
       googleInitialized.current = true;
     };
@@ -134,7 +124,62 @@ const Login: React.FC = () => {
       }, 200);
       return () => clearInterval(interval);
     }
-  }, []);
+  }, [handleGoogleCredentialResponse]);
+
+  // ─── Custom button click: cancel any lingering prompt, then open a fresh one ───
+  const triggerGoogleSignIn = () => {
+    const g = (window as any).google;
+    if (!g) {
+      setError('Google SDK is not loaded. Please refresh the page.');
+      return;
+    }
+
+    // Cancel any existing One Tap / prompt overlay first
+    g.accounts.id.cancel();
+
+    // Re-initialize fresh so the popup always fires, ignoring browser FedCM state
+    g.accounts.id.initialize({
+      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
+      callback: handleGoogleCredentialResponse,
+      ux_mode: 'popup',
+      cancel_on_tap_outside: true,
+    });
+
+    g.accounts.id.prompt((notification: any) => {
+      if (notification.isNotDisplayed()) {
+        // FedCM / One Tap blocked — fall back to OAuth2 popup
+        const tokenClient = g.accounts.oauth2.initTokenClient({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
+          scope: 'openid email profile',
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse.error) {
+              setError('Google sign-in was cancelled or failed.');
+              return;
+            }
+            // Exchange access token for user info, then fire backend check
+            setIsLoading(true);
+            try {
+              const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+              });
+              const userInfo = await userInfoRes.json();
+              if (userInfo.email) {
+                setGoogleEmail(userInfo.email);
+                await sendOtp(userInfo.email, 'LOGIN');
+              } else {
+                setError('Could not retrieve Google account email.');
+              }
+            } catch {
+              setError('Failed to retrieve Google account info.');
+            } finally {
+              setIsLoading(false);
+            }
+          },
+        });
+        tokenClient.requestAccessToken({ prompt: 'select_account' });
+      }
+    });
+  };
 
   const sendOtp = async (email: string, type: 'LOGIN' | 'FORGOT_PASSWORD') => {
     setIsLoading(true);
@@ -142,7 +187,7 @@ const Login: React.FC = () => {
     else { setModalError(''); setModalSuccess(''); }
 
     try {
-      const res  = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, type }),
@@ -216,7 +261,7 @@ const Login: React.FC = () => {
       const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData), 
+        body: JSON.stringify(formData),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -327,6 +372,7 @@ const Login: React.FC = () => {
         @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
       `}</style>
 
+      {/* ─── FORGOT PASSWORD MODAL ─── */}
       {forgotStep > 0 && (
         <div className="tp-modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
           <div className="tp-modal-card">
@@ -349,14 +395,9 @@ const Login: React.FC = () => {
                 {modalError && <div className="error-message" style={{ marginBottom: '16px' }}>{modalError}</div>}
                 {modalSuccess && <div className="success-message" style={{ marginBottom: '16px' }}>{modalSuccess}</div>}
                 <input
-                  type="text"
-                  placeholder="000000"
-                  className="tp-modal-input"
-                  maxLength={6}
+                  type="text" placeholder="000000" className="tp-modal-input" maxLength={6}
                   style={{ textAlign: 'center', fontSize: '24px', letterSpacing: '12px', fontWeight: 600 }}
-                  value={otpCode}
-                  onChange={e => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                  required
+                  value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))} required
                 />
                 <button type="submit" className="tp-modal-btn" disabled={isLoading || otpCode.length < 6}>{isLoading ? 'Verifying...' : 'Verify Code'}</button>
                 <div style={{ textAlign: 'center', marginTop: '16px' }}>
@@ -379,6 +420,7 @@ const Login: React.FC = () => {
         </div>
       )}
 
+      {/* ─── MAIN LOGIN SCREEN ─── */}
       <div className="login-container">
         <div className="login-left">
           <div className="left-logo">
@@ -443,35 +485,26 @@ const Login: React.FC = () => {
                 <div className="form-group">
                   <label className="form-label">Verification Code (OTP)</label>
                   <input
-                    type="text"
-                    value={otpCode}
+                    type="text" value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="Enter 6-digit code"
-                    className="form-input"
+                    placeholder="Enter 6-digit code" className="form-input"
                     style={{ textAlign: 'center', fontSize: '20px', letterSpacing: '8px', fontWeight: 600 }}
-                    maxLength={6}
-                    required
+                    maxLength={6} required
                   />
                 </div>
                 <button type="submit" className="login-button" disabled={isLoading || otpCode.length < 6}>
                   {isLoading ? 'Verifying…' : 'Verify & Sign In'}
                 </button>
                 <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                  <button
-                    type="button"
-                    className="back-button"
+                  <button type="button" className="back-button"
                     onClick={() => { setError(''); setSuccess(''); sendOtp(googleEmail, 'LOGIN'); }}
-                    disabled={isLoading}
-                  >
+                    disabled={isLoading}>
                     Resend OTP
                   </button>
                 </div>
                 <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={handleBackToLogin}
-                    style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
-                  >
+                  <button type="button" onClick={handleBackToLogin}
+                    style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}>
                     ← Back to Login
                   </button>
                 </div>
@@ -481,36 +514,20 @@ const Login: React.FC = () => {
                 <form onSubmit={handleLogin} className="login-form">
                   <div className="form-group">
                     <label htmlFor="email" className="form-label">Email Address</label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
+                    <input type="email" id="email" name="email" value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="Enter your email"
-                      className="form-input"
-                      required
-                    />
+                      placeholder="Enter your email" className="form-input" required />
                   </div>
                   <div className="form-group">
                     <label htmlFor="password" className="form-label">Password</label>
-                    <input
-                      type="password"
-                      id="password"
-                      name="password"
-                      value={formData.password}
+                    <input type="password" id="password" name="password" value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      placeholder="Enter your password"
-                      className="form-input"
-                      required
-                    />
+                      placeholder="Enter your password" className="form-input" required />
                     <div className="form-footer">
-                      <button
-                        type="button"
+                      <button type="button"
                         onClick={() => { setError(''); setSuccess(''); setForgotStep(1); }}
                         className="forgot-link"
-                        style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}
-                      >
+                        style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}>
                         Forgot password?
                       </button>
                     </div>
@@ -532,16 +549,30 @@ const Login: React.FC = () => {
                   <div className="divider-line"/>
                 </div>
 
-                {/* THE REAL FIX: This div is where Google builds the unblockable button */}
-                <div id="google-signin-button" style={{ display: 'flex', justifyContent: 'center', width: '100%' }}></div>
+                {/*
+                  Custom fully-styled Google button.
+                  Calls triggerGoogleSignIn which uses accounts.id.prompt() with
+                  an oauth2 fallback — no renderButton, no FedCM pill UI.
+                */}
+                <button
+                  type="button"
+                  onClick={triggerGoogleSignIn}
+                  className="google-button"
+                  disabled={isLoading}
+                >
+                  <svg className="google-icon" viewBox="0 0 24 24" width="20" height="20">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  {isLoading ? 'Connecting...' : 'Sign in with Google'}
+                </button>
 
                 <p className="signup-link" style={{ marginTop: '20px' }}>
                   Don't have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={() => navigate('/register')}
-                    style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-                  >
+                  <button type="button" onClick={() => navigate('/register')}
+                    style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
                     Sign up
                   </button>
                 </p>
