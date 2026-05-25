@@ -223,9 +223,15 @@ const Login: React.FC = () => {
     }
   }, []);
 
-  const triggerGooglePopup = () => {
+const triggerGooglePopup = () => {
     if ((window as any).google) {
-      (window as any).google.accounts.id.prompt();
+      (window as any).google.accounts.id.initialize({
+        client_id: "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
+        callback: handleGoogleCredentialResponse,
+        ux_mode: "popup", 
+        itp_support: true
+      });
+      (window as any).google.accounts.id.prompt(); 
     } else {
       setError("Google SDK failed to load. Please refresh the page.");
     }
