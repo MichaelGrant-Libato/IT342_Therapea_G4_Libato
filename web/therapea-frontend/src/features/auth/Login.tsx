@@ -81,7 +81,6 @@ const Login: React.FC = () => {
           setShowOtpFlow(true);
           setSuccess(data.message || `Verification code sent to ${email}`);
         } else {
-          // 🔴 THE MAGIC JUMP: Skip straight to New Password for Regular Accounts!
           if (data.requiresOtp === false) {
             setForgotStep(3); 
             setModalSuccess('');
@@ -172,47 +171,57 @@ const Login: React.FC = () => {
     finally { setIsLoading(false); }
   };
 
-const handleGoogleLogin = async () => {
+  // Direct production authentication handler using the native credential payload token
+  const handleGoogleCredentialResponse = async (response: any) => {
     setIsLoading(true); setError(''); setSuccess('');
     try {
-      const res  = await fetch(`${API_BASE_URL}/api/auth/google-register-url`);
+      const res = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: response.credential }),
+      });
+
+      const data = await res.json();
+
       if (res.ok) {
-        const data = await res.json();
-        sessionStorage.setItem('oauth_state', data.state);
-        const popup = window.open(data.url, 'google-oauth', 'width=500,height=600,scrollbars=yes,resizable=yes');
+        if (rememberMe) localStorage.setItem('user', JSON.stringify(data));
+        else {
+          sessionStorage.setItem('user', JSON.stringify(data));
+          sessionStorage.setItem('sessionStart', Date.now().toString());
+        }
+        setSuccess('Google Login successful! Redirecting...');
+        setTimeout(() => handleRoleBasedNavigation(data.role), 1500);
+      } else {
+        if (res.status === 404 && data.email) {
+          setGoogleEmail(data.email);
+          sendOtp(data.email, 'LOGIN');
+        } else {
+          setError(data.error || 'Google validation failed.');
+        }
+      }
+    } catch {
+      setError('Failed to process Google authentication mapping.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-        if (!popup) { setError('Popup blocked.'); setIsLoading(false); return; }
+  // Wire up the Google One Tap / Sign In Initialization lifecycle
+  useEffect(() => {
+    if ((window as any).google) {
+      (window as any).google.accounts.id.initialize({
+        client_id: "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
+        callback: handleGoogleCredentialResponse,
+      });
+    }
+  }, []);
 
-        const handleMessage = async (event: MessageEvent) => {
-          // Allowed security origins list (Backend and Google authentication nodes)
-          const allowedOrigins = [
-            API_BASE_URL,
-            'https://accounts.google.com',
-            window.location.origin
-          ];
-
-          if (!allowedOrigins.includes(event.origin)) {
-            console.log("Blocked cross-origin token attempt from origin:", event.origin);
-            return; 
-          }
-
-          // Ignore empty messages or non-auth packages
-          if (!event.data || !event.data.type) return;
-
-          window.removeEventListener('message', handleMessage);
-          setIsLoading(false);
-          
-          if (popup && !popup.closed) popup.close(); // Automatically close the login popup frame
-
-          const { type, email } = event.data;
-          if (type === 'error') { setError('Google sign-in failed.'); return; }
-          if (type === 'existing') { setGoogleEmail(email); sendOtp(email, 'LOGIN'); return; }
-          if (type === 'new') navigate(`/register?email=${encodeURIComponent(email)}&name=${encodeURIComponent(event.data.name || '')}`);
-        };
-
-        window.addEventListener('message', handleMessage);
-      } else { setError(await parseError(res)); setIsLoading(false); }
-    } catch { setError('Failed to connect to Google.'); setIsLoading(false); }
+  const triggerGooglePopup = () => {
+    if ((window as any).google) {
+      (window as any).google.accounts.id.prompt();
+    } else {
+      setError("Google SDK failed to load. Please refresh the page.");
+    }
   };
 
   // ─── FORGOT PASSWORD MODAL HANDLERS ───
@@ -297,7 +306,7 @@ const handleGoogleLogin = async () => {
         @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
       `}</style>
 
-      {/* ─── BULLETPROOF FORGOT PASSWORD MODAL ─── */}
+      {/* ─── FORGOT PASSWORD MODAL ─── */}
       {forgotStep > 0 && (
         <div className="tp-modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
           <div className="tp-modal-card">
@@ -442,7 +451,8 @@ const handleGoogleLogin = async () => {
                   <div className="divider-line"/>
                 </div>
 
-                <button onClick={handleGoogleLogin} className="google-button" disabled={isLoading}>
+                {/* This button now interfaces directly via the initialized Google Identity Services pipeline */}
+                <button type="button" onClick={triggerGooglePopup} className="google-button" disabled={isLoading}>
                   <svg className="google-icon" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
