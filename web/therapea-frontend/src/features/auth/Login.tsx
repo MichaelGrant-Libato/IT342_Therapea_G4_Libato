@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import "./Login.css";
 
@@ -12,20 +12,23 @@ const Login: React.FC = () => {
   const [success, setSuccess]       = useState('');
   const [isLoading, setIsLoading]   = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  
+
   // Google OTP State
-  const [googleEmail, setGoogleEmail] = useState('');
-  const [showOtpFlow, setShowOtpFlow] = useState(false);
-  const [otpCode, setOtpCode]         = useState('');
-  const [storedIdToken, setStoredIdToken] = useState(''); // Holds the token string for multi-step verification
+  const [googleEmail, setGoogleEmail]       = useState('');
+  const [showOtpFlow, setShowOtpFlow]       = useState(false);
+  const [otpCode, setOtpCode]               = useState('');
+  const [storedIdToken, setStoredIdToken]   = useState('');
 
   // FORGOT PASSWORD MODAL STATE
-  const [forgotStep, setForgotStep] = useState(0); 
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [modalError, setModalError] = useState('');
-  const [modalSuccess, setModalSuccess] = useState('');
+  const [forgotStep, setForgotStep]             = useState(0);
+  const [forgotEmail, setForgotEmail]           = useState('');
+  const [newPassword, setNewPassword]           = useState('');
+  const [confirmPassword, setConfirmPassword]   = useState('');
+  const [modalError, setModalError]             = useState('');
+  const [modalSuccess, setModalSuccess]         = useState('');
+
+  // Ref to track if Google has been initialized already
+  const googleInitialized = useRef(false);
 
   const parseError = async (res: Response, preParsedData?: any) => {
     try {
@@ -48,9 +51,9 @@ const Login: React.FC = () => {
       return;
     }
 
-    const params  = new URLSearchParams(window.location.search);
-    const gEmail  = params.get('googleEmail');
-    const err     = params.get('error');
+    const params = new URLSearchParams(window.location.search);
+    const gEmail = params.get('googleEmail');
+    const err    = params.get('error');
 
     window.history.replaceState({}, document.title, '/login');
 
@@ -63,18 +66,77 @@ const Login: React.FC = () => {
     }
   }, [navigate]);
 
+  // Direct production Google authentication handler parses directly to Spring Boot backend controller logic
+  const handleGoogleCredentialResponse = async (response: any) => {
+    setIsLoading(true); setError(''); setSuccess('');
+    try {
+      const token = response.credential;
+      setStoredIdToken(token); // Save the signature globally for step 2 verification parsing
+
+      const res = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: token }),
+      });
+
+      const data = await res.json();
+
+      // Intercept profile match or 404 tracking step and route smoothly into your OTP prompt chain
+      if (res.ok || (res.status === 200 && data.email) || (res.status === 404 && data.email)) {
+        setGoogleEmail(data.email);
+        sendOtp(data.email, 'LOGIN');
+      } else {
+        setError(data.error || 'Google verification routing error.');
+      }
+    } catch {
+      setError('Failed to process Google sign-in. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ─── INITIALIZE GOOGLE ONCE ───
+  useEffect(() => {
+    if (googleInitialized.current) return;
+
+    const initGoogle = () => {
+      if (!(window as any).google) return;
+
+      (window as any).google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
+        callback: handleGoogleCredentialResponse,
+        ux_mode: "popup",
+        itp_support: true,
+      });
+
+      googleInitialized.current = true;
+    };
+
+    if ((window as any).google) {
+      initGoogle();
+    } else {
+      const interval = setInterval(() => {
+        if ((window as any).google) {
+          clearInterval(interval);
+          initGoogle();
+        }
+      }, 200);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
   const sendOtp = async (email: string, type: 'LOGIN' | 'FORGOT_PASSWORD') => {
     setIsLoading(true);
-    if (type === 'LOGIN') { setError(''); setSuccess(''); } 
+    if (type === 'LOGIN') { setError(''); setSuccess(''); }
     else { setModalError(''); setModalSuccess(''); }
-    
+
     try {
       const res  = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, type }),
       });
-      
+
       const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
@@ -83,10 +145,10 @@ const Login: React.FC = () => {
           setSuccess(data.message || `Verification code sent to ${email}`);
         } else {
           if (data.requiresOtp === false) {
-            setForgotStep(3); 
+            setForgotStep(3);
             setModalSuccess('');
           } else {
-            setForgotStep(2); 
+            setForgotStep(2);
             setModalSuccess(data.message || `Code sent to ${email}`);
           }
         }
@@ -107,8 +169,7 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true); setError(''); setSuccess('');
     try {
-      // 1. Verify that the user input matches the issued OTP record transaction
-      const verifyRes  = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+      const verifyRes = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: googleEmail, otp: otpCode }),
@@ -116,15 +177,14 @@ const Login: React.FC = () => {
 
       if (!verifyRes.ok) { setError(await parseError(verifyRes)); setIsLoading(false); return; }
 
-      // 2. Route back to complete authentication using the token fallback reference context
       const userRes = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: storedIdToken })
+        body: JSON.stringify({ idToken: storedIdToken }),
       });
-      
+
       if (userRes.ok) {
-        const sessionData = await userRes.json(); 
+        const sessionData = await userRes.json();
         if (rememberMe) localStorage.setItem('user', JSON.stringify(sessionData));
         else {
           sessionStorage.setItem('user', JSON.stringify(sessionData));
@@ -135,7 +195,7 @@ const Login: React.FC = () => {
       } else {
         setError(await parseError(userRes));
       }
-    } catch { setError('Connection error handling profile mapping.'); } 
+    } catch { setError('Connection error handling profile mapping.'); }
     finally { setIsLoading(false); }
   };
 
@@ -148,7 +208,7 @@ const Login: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ formData }),
       });
-      
+
       const data = await res.json().catch(() => ({}));
 
       if (data.requiresOtp) {
@@ -167,70 +227,26 @@ const Login: React.FC = () => {
         }
         setSuccess('Login successful! Redirecting...');
         setTimeout(() => handleRoleBasedNavigation(data.role), 1500);
-      } else { 
-        setError(await parseError(res, data)); 
+      } else {
+        setError(await parseError(res, data));
       }
-    } catch { setError('Connection error.'); } 
+    } catch { setError('Connection error.'); }
     finally { setIsLoading(false); }
   };
 
-const handleGoogleCredentialResponse = async (response: any) => {
-    setIsLoading(true); setError(''); setSuccess('');
-    try {
-      const token = response.credential;
-      setStoredIdToken(token); // Save the signature globally for step 2 verification parsing
-
-      const res = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: token }),
-      });
-
-      const data = await res.json();
-
-      // If the backend indicates a successful profile match, intercept and fire the OTP prompt chain
-      if (res.ok || (res.status === 200 && data.email)) {
-        setGoogleEmail(data.email);
-        sendOtp(data.email, 'LOGIN');
-      } else if (res.status === 404 && data.email) {
-        setGoogleEmail(data.email);
-        sendOtp(data.email, 'LOGIN');
-      } else {
-        setError(data.error || 'Google verification routing error.');
-      }
-    } catch {
-      setError('Failed to process secure Google validation sequence cascade.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Wire up the Google configuration ONCE on initialization
-  useEffect(() => {
-    if ((window as any).google) {
-      (window as any).google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
-        callback: handleGoogleCredentialResponse,
-        ux_mode: "popup",
-        itp_support: true
-      });
-    }
-    // REMOVED: No background automatic prompt rendering here to keep the credential pipeline clear
-  }, [API_BASE_URL]); 
-
-  // Clean button listener that launches the popup directly on user click
+  // Safe programmatic prompt window trigger linked directly to your beautiful custom button style
   const triggerGooglePopup = () => {
     if ((window as any).google) {
-      // Clear previous overlay contexts and force open the account chooser popup cleanly
+      // Re-initialize cleanly on explicit user tap action to refresh the token context and prevent thread lockups
       (window as any).google.accounts.id.initialize({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
         callback: handleGoogleCredentialResponse,
         ux_mode: "popup",
-        itp_support: true
+        itp_support: true,
       });
       (window as any).google.accounts.id.prompt();
     } else {
-      setError("Google SDK failed to load. Please refresh the page.");
+      setError("Google authentication service is loading. Please wait a moment and try again.");
     }
   };
 
@@ -245,7 +261,7 @@ const handleGoogleCredentialResponse = async (response: any) => {
     e.preventDefault();
     setIsLoading(true); setModalError(''); setModalSuccess('');
     try {
-      const verifyRes  = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+      const verifyRes = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail, otp: otpCode }),
@@ -254,11 +270,11 @@ const handleGoogleCredentialResponse = async (response: any) => {
       if (!verifyRes.ok) {
         setModalError(await parseError(verifyRes));
       } else {
-        setForgotStep(3); 
+        setForgotStep(3);
         setModalSuccess('');
         setOtpCode('');
       }
-    } catch { setModalError('Network error verifying code.'); } 
+    } catch { setModalError('Network error verifying code.'); }
     finally { setIsLoading(false); }
   };
 
@@ -274,12 +290,12 @@ const handleGoogleCredentialResponse = async (response: any) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail, newPassword: newPassword }),
       });
-      
+
       if (res.ok) {
-        closeModal(); 
+        closeModal();
         setSuccess('Password updated successfully! You can now sign in.');
       } else { setModalError(await parseError(res)); }
-    } catch { setModalError('Network error updating password.'); } 
+    } catch { setModalError('Network error updating password.'); }
     finally { setIsLoading(false); }
   };
 
@@ -290,13 +306,15 @@ const handleGoogleCredentialResponse = async (response: any) => {
 
   const handleBackToLogin = () => {
     setShowOtpFlow(false);
-    setError(''); 
-    setSuccess(''); 
+    setError('');
+    setSuccess('');
     setOtpCode('');
   };
 
   const CheckIcon = () => (
-    <svg width="10" height="8" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+    <svg width="10" height="8" viewBox="0 0 12 10" fill="none">
+      <path d="M1 5l3.5 3.5L11 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
   );
 
   return (
@@ -321,7 +339,7 @@ const handleGoogleCredentialResponse = async (response: any) => {
         <div className="tp-modal-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
           <div className="tp-modal-card">
             <button type="button" className="tp-modal-close" onClick={closeModal}>×</button>
-            
+
             {forgotStep === 1 && (
               <form onSubmit={handleForgotSubmitEmail}>
                 <h2 className="tp-modal-title">Reset Password</h2>
@@ -338,7 +356,16 @@ const handleGoogleCredentialResponse = async (response: any) => {
                 <p className="tp-modal-desc">Enter the 6-digit code sent to your email <strong>{forgotEmail}</strong></p>
                 {modalError && <div className="error-message" style={{ marginBottom: '16px' }}>{modalError}</div>}
                 {modalSuccess && <div className="success-message" style={{ marginBottom: '16px' }}>{modalSuccess}</div>}
-                <input type="text" placeholder="000000" className="tp-modal-input" maxLength={6} style={{ textAlign: 'center', fontSize: '24px', letterSpacing: '12px', fontWeight: 600 }} value={otpCode} onChange={e => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))} required />
+                <input
+                  type="text"
+                  placeholder="000000"
+                  className="tp-modal-input"
+                  maxLength={6}
+                  style={{ textAlign: 'center', fontSize: '24px', letterSpacing: '12px', fontWeight: 600 }}
+                  value={otpCode}
+                  onChange={e => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                  required
+                />
                 <button type="submit" className="tp-modal-btn" disabled={isLoading || otpCode.length < 6}>{isLoading ? 'Verifying...' : 'Verify Code'}</button>
                 <div style={{ textAlign: 'center', marginTop: '16px' }}>
                   <button type="button" onClick={() => sendOtp(forgotEmail, 'FORGOT_PASSWORD')} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', textDecoration: 'underline' }}>Resend Code</button>
@@ -403,11 +430,17 @@ const handleGoogleCredentialResponse = async (response: any) => {
                 </div>
                 <span className="login-logo-text">Thera<span>Pea</span></span>
               </div>
-              
+
               {showOtpFlow ? (
-                <><h1 className="login-title">Verify Your Identity</h1><p className="login-subtitle">Enter the verification code to sign in as <strong>{googleEmail}</strong></p></>
+                <>
+                  <h1 className="login-title">Verify Your Identity</h1>
+                  <p className="login-subtitle">Enter the verification code to sign in as <strong>{googleEmail}</strong></p>
+                </>
               ) : (
-                <><h1 className="login-title">Welcome Back</h1><p className="login-subtitle">Sign in to your account to continue your wellness journey</p></>
+                <>
+                  <h1 className="login-title">Welcome Back</h1>
+                  <p className="login-subtitle">Sign in to your account to continue your wellness journey</p>
+                </>
               )}
             </div>
 
@@ -418,14 +451,38 @@ const handleGoogleCredentialResponse = async (response: any) => {
               <form onSubmit={handleVerifyOtp} className="login-form">
                 <div className="form-group">
                   <label className="form-label">Verification Code (OTP)</label>
-                  <input type="text" value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))} placeholder="Enter 6-digit code" className="form-input" style={{ textAlign: 'center', fontSize: '20px', letterSpacing: '8px', fontWeight: 600 }} maxLength={6} required />
+                  <input
+                    type="text"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="Enter 6-digit code"
+                    className="form-input"
+                    style={{ textAlign: 'center', fontSize: '20px', letterSpacing: '8px', fontWeight: 600 }}
+                    maxLength={6}
+                    required
+                  />
                 </div>
-                <button type="submit" className="login-button" disabled={isLoading || otpCode.length < 6}>{isLoading ? 'Verifying…' : 'Verify & Sign In'}</button>
+                <button type="submit" className="login-button" disabled={isLoading || otpCode.length < 6}>
+                  {isLoading ? 'Verifying…' : 'Verify & Sign In'}
+                </button>
                 <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                  <button type="button" className="back-button" onClick={() => { setError(''); setSuccess(''); sendOtp(googleEmail, 'LOGIN'); }} disabled={isLoading}>Resend OTP</button>
+                  <button
+                    type="button"
+                    className="back-button"
+                    onClick={() => { setError(''); setSuccess(''); sendOtp(googleEmail, 'LOGIN'); }}
+                    disabled={isLoading}
+                  >
+                    Resend OTP
+                  </button>
                 </div>
                 <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                  <button type="button" onClick={handleBackToLogin} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}>← Back to Login</button>
+                  <button
+                    type="button"
+                    onClick={handleBackToLogin}
+                    style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '14px', fontWeight: 500 }}
+                  >
+                    ← Back to Login
+                  </button>
                 </div>
               </form>
             ) : (
@@ -433,13 +490,36 @@ const handleGoogleCredentialResponse = async (response: any) => {
                 <form onSubmit={handleLogin} className="login-form">
                   <div className="form-group">
                     <label htmlFor="email" className="form-label">Email Address</label>
-                    <input type="email" id="email" name="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="Enter your email" className="form-input" required />
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="Enter your email"
+                      className="form-input"
+                      required
+                    />
                   </div>
                   <div className="form-group">
                     <label htmlFor="password" className="form-label">Password</label>
-                    <input type="password" id="password" name="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Enter your password" className="form-input" required />
+                    <input
+                      type="password"
+                      id="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      placeholder="Enter your password"
+                      className="form-input"
+                      required
+                    />
                     <div className="form-footer">
-                      <button type="button" onClick={() => { setError(''); setSuccess(''); setForgotStep(1); }} className="forgot-link" style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}>
+                      <button
+                        type="button"
+                        onClick={() => { setError(''); setSuccess(''); setForgotStep(1); }}
+                        className="forgot-link"
+                        style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}
+                      >
                         Forgot password?
                       </button>
                     </div>
@@ -461,8 +541,13 @@ const handleGoogleCredentialResponse = async (response: any) => {
                   <div className="divider-line"/>
                 </div>
 
-                {/* Clean, fully integrated custom HTML button layout matching your theme configuration styles */}
-                <button type="button" onClick={triggerGooglePopup} className="google-button" disabled={isLoading}>
+                {/* Visible custom-styled button that safely calls the public prompt window */}
+                <button
+                  type="button"
+                  onClick={triggerGooglePopup}
+                  className="google-button"
+                  disabled={isLoading}
+                >
                   <svg className="google-icon" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                     <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -474,7 +559,11 @@ const handleGoogleCredentialResponse = async (response: any) => {
 
                 <p className="signup-link">
                   Don't have an account?{' '}
-                  <button type="button" onClick={() => navigate('/register')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/register')}
+                    style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                  >
                     Sign up
                   </button>
                 </p>
