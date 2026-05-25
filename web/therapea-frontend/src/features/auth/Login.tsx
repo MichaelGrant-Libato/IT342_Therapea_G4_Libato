@@ -65,26 +65,19 @@ const Login: React.FC = () => {
     }
   }, [navigate]);
 
-  // ─── Stable callback ref so Google always calls the latest version ───
   const handleGoogleCredentialResponse = useCallback(async (response: any) => {
     setIsLoading(true); setError(''); setSuccess('');
     try {
       const token = response.credential;
-
       const res = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken: token }),
       });
-
       const data = await res.json();
-
-      if (res.ok || res.status === 200) {
+      if (res.ok || res.status === 200 || (res.status === 404 && data.email)) {
         setGoogleEmail(data.email);
-        sendOtp(data.email, 'LOGIN');
-      } else if (res.status === 404 && data.email) {
-        setGoogleEmail(data.email);
-        sendOtp(data.email, 'LOGIN');
+        await sendOtp(data.email, 'LOGIN'); // ← was missing await
       } else {
         setError(data.error || 'Google verification routing error.');
       }
@@ -126,60 +119,44 @@ const Login: React.FC = () => {
     }
   }, [handleGoogleCredentialResponse]);
 
-  // ─── Custom button click: cancel any lingering prompt, then open a fresh one ───
   const triggerGoogleSignIn = () => {
-    const g = (window as any).google;
-    if (!g) {
-      setError('Google SDK is not loaded. Please refresh the page.');
-      return;
-    }
+  const g = (window as any).google;
+  if (!g) {
+    setError('Google SDK is not loaded. Please refresh the page.');
+    return;
+  }
 
-    // Cancel any existing One Tap / prompt overlay first
-    g.accounts.id.cancel();
-
-    // Re-initialize fresh so the popup always fires, ignoring browser FedCM state
-    g.accounts.id.initialize({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
-      callback: handleGoogleCredentialResponse,
-      ux_mode: 'popup',
-      cancel_on_tap_outside: true,
-    });
-
-    g.accounts.id.prompt((notification: any) => {
-      if (notification.isNotDisplayed()) {
-        // FedCM / One Tap blocked — fall back to OAuth2 popup
-        const tokenClient = g.accounts.oauth2.initTokenClient({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
-          scope: 'openid email profile',
-          callback: async (tokenResponse: any) => {
-            if (tokenResponse.error) {
-              setError('Google sign-in was cancelled or failed.');
-              return;
-            }
-            // Exchange access token for user info, then fire backend check
-            setIsLoading(true);
-            try {
-              const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-              });
-              const userInfo = await userInfoRes.json();
-              if (userInfo.email) {
-                setGoogleEmail(userInfo.email);
-                await sendOtp(userInfo.email, 'LOGIN');
-              } else {
-                setError('Could not retrieve Google account email.');
-              }
-            } catch {
-              setError('Failed to retrieve Google account info.');
-            } finally {
-              setIsLoading(false);
-            }
-          },
-        });
-        tokenClient.requestAccessToken({ prompt: 'select_account' });
+  // Use OAuth2 directly — opens a CENTERED popup, not browser FedCM (top-right)
+  const tokenClient = g.accounts.oauth2.initTokenClient({
+    client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
+    scope: 'openid email profile',
+    callback: async (tokenResponse: any) => {
+      if (tokenResponse.error) {
+        setError('Google sign-in was cancelled or failed.');
+        return;
       }
-    });
-  };
+      setIsLoading(true);
+      try {
+        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        const userInfo = await userInfoRes.json();
+        if (userInfo.email) {
+          setGoogleEmail(userInfo.email);
+          await sendOtp(userInfo.email, 'LOGIN'); // ← awaited properly
+        } else {
+          setError('Could not retrieve Google account email.');
+        }
+      } catch {
+        setError('Failed to retrieve Google account info.');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+  });
+
+  tokenClient.requestAccessToken({ prompt: 'select_account' });
+};
 
   const sendOtp = async (email: string, type: 'LOGIN' | 'FORGOT_PASSWORD') => {
     setIsLoading(true);
