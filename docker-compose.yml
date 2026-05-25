@@ -1,0 +1,25 @@
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: therapea-backend
+    restart: always
+    ports:
+      - "8083:8083"
+    # Pulls system properties (${DB_USERNAME}, etc.) from your local file directly into the container
+    env_file:
+      - ./backend/.env
+
+  # Web Frontend Service
+  frontend:
+    build:
+      context: ./web/therapea-frontend
+      dockerfile: Dockerfile
+    container_name: therapea-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
