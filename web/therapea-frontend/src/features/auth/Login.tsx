@@ -174,12 +174,12 @@ const Login: React.FC = () => {
     finally { setIsLoading(false); }
   };
 
-  // Direct production authentication handler parsing directly to Spring Boot backend controller logic
+// 1. Direct production authentication handler parsing directly to Spring Boot backend controller logic
   const handleGoogleCredentialResponse = async (response: any) => {
     setIsLoading(true); setError(''); setSuccess('');
     try {
       const token = response.credential;
-      setStoredIdToken(token); // Store the session token reference locally for the verification step
+      setStoredIdToken(token); 
 
       const res = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
         method: 'POST',
@@ -212,26 +212,21 @@ const Login: React.FC = () => {
     }
   };
 
-  // Wire up the Google One Tap / Sign In Initialization lifecycle
+  // 2. Wire up the Google Sign In Initialization lifecycle ONCE on component mount
   useEffect(() => {
     if ((window as any).google) {
       (window as any).google.accounts.id.initialize({
         client_id: "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
         callback: handleGoogleCredentialResponse,
-        itp_support: true // Bypasses Intelligent Tracking Prevention and rigid cookie limitations natively
-      });
-    }
-  }, []);
-
-const triggerGooglePopup = () => {
-    if ((window as any).google) {
-      (window as any).google.accounts.id.initialize({
-        client_id: "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
-        callback: handleGoogleCredentialResponse,
-        ux_mode: "popup", 
+        ux_mode: "popup",
         itp_support: true
       });
-      (window as any).google.accounts.id.prompt(); 
+    }
+  }, [API_BASE_URL]); // Initializes exactly once
+
+  const triggerGooglePopup = () => {
+    if ((window as any).google) {
+      (window as any).google.accounts.id.prompt();
     } else {
       setError("Google SDK failed to load. Please refresh the page.");
     }
