@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  
+  // Local development proxy settings (runs when using npm run dev)
   server: {
     proxy: {
       '/api': {
@@ -14,6 +16,14 @@ export default defineConfig({
   },
 
   preview: {
-    allowedHosts: true
+    allowedHosts: true,
+    proxy: {
+      '/api': {
+        target: 'https://therapea-backend.onrender.com',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
   }
 })
