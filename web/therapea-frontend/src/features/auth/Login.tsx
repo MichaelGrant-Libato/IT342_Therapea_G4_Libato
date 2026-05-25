@@ -17,7 +17,6 @@ const Login: React.FC = () => {
   const [googleEmail, setGoogleEmail]       = useState('');
   const [showOtpFlow, setShowOtpFlow]       = useState(false);
   const [otpCode, setOtpCode]               = useState('');
-  const [storedIdToken, setStoredIdToken]   = useState('');
 
   // FORGOT PASSWORD MODAL STATE
   const [forgotStep, setForgotStep]             = useState(0);
@@ -27,7 +26,6 @@ const Login: React.FC = () => {
   const [modalError, setModalError]             = useState('');
   const [modalSuccess, setModalSuccess]         = useState('');
 
-  // Ref to track if Google has been initialized already
   const googleInitialized = useRef(false);
 
   const parseError = async (res: Response, preParsedData?: any) => {
@@ -66,12 +64,10 @@ const Login: React.FC = () => {
     }
   }, [navigate]);
 
-  // Direct production Google authentication handler parses directly to Spring Boot backend controller logic
   const handleGoogleCredentialResponse = async (response: any) => {
     setIsLoading(true); setError(''); setSuccess('');
     try {
       const token = response.credential;
-      setStoredIdToken(token); // Save the signature globally for step 2 verification parsing
 
       const res = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
         method: 'POST',
@@ -81,12 +77,12 @@ const Login: React.FC = () => {
 
       const data = await res.json();
 
-      // Intercept profile match or 404 tracking step and route smoothly into your OTP prompt chain
-      if (res.ok || (res.status === 200 && data.email) || (res.status === 404 && data.email)) {
+      if (res.ok && data.requiresOtp) {
         setGoogleEmail(data.email);
-        sendOtp(data.email, 'LOGIN');
+        setShowOtpFlow(true);
+        setSuccess(data.message || `Verification code sent to your email address.`);
       } else {
-        setError(data.error || 'Google verification routing error.');
+        setError(data.error || 'Google login mapping validation error.');
       }
     } catch {
       setError('Failed to process Google sign-in. Please try again.');
@@ -95,7 +91,7 @@ const Login: React.FC = () => {
     }
   };
 
-  // ─── INITIALIZE GOOGLE ONCE ───
+  // ─── INITIALIZE GOOGLE LIFECYCLE ONCE ───
   useEffect(() => {
     if (googleInitialized.current) return;
 
@@ -164,39 +160,35 @@ const Login: React.FC = () => {
     }
   };
 
-  // ─── LOGIN HANDLERS ───
+  // ─── OTP VERIFICATION FLOW SUBMITTER ───
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true); setError(''); setSuccess('');
     try {
-      const verifyRes = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+      const verifyRes = await fetch(`${API_BASE_URL}/api/auth/google-verify-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: googleEmail, otp: otpCode }),
       });
 
-      if (!verifyRes.ok) { setError(await parseError(verifyRes)); setIsLoading(false); return; }
+      const data = await verifyRes.json();
 
-      const userRes = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: storedIdToken }),
-      });
-
-      if (userRes.ok) {
-        const sessionData = await userRes.json();
-        if (rememberMe) localStorage.setItem('user', JSON.stringify(sessionData));
+      if (verifyRes.ok) {
+        if (rememberMe) localStorage.setItem('user', JSON.stringify(data));
         else {
-          sessionStorage.setItem('user', JSON.stringify(sessionData));
+          sessionStorage.setItem('user', JSON.stringify(data));
           sessionStorage.setItem('sessionStart', Date.now().toString());
         }
-        setSuccess('Login successful! Redirecting...');
-        setTimeout(() => handleRoleBasedNavigation(sessionData.role), 1500);
+        setSuccess('Verification successful! Access unlocked...');
+        setTimeout(() => handleRoleBasedNavigation(data.role), 1500);
       } else {
-        setError(await parseError(userRes));
+        setError(data.error || "MFA validation parameters failed verification.");
       }
-    } catch { setError('Connection error handling profile mapping.'); }
-    finally { setIsLoading(false); }
+    } catch { 
+      setError('Connection error handling profile mapping.'); 
+    } finally { 
+      setIsLoading(false); 
+    }
   };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -206,7 +198,7 @@ const Login: React.FC = () => {
       const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formData }),
+        body: JSON.stringify(formData), 
       });
 
       const data = await res.json().catch(() => ({}));
@@ -234,16 +226,8 @@ const Login: React.FC = () => {
     finally { setIsLoading(false); }
   };
 
-  // Safe programmatic prompt window trigger linked directly to your beautiful custom button style
   const triggerGooglePopup = () => {
     if ((window as any).google) {
-      // Re-initialize cleanly on explicit user tap action to refresh the token context and prevent thread lockups
-      (window as any).google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
-        callback: handleGoogleCredentialResponse,
-        ux_mode: "popup",
-        itp_support: true,
-      });
       (window as any).google.accounts.id.prompt();
     } else {
       setError("Google authentication service is loading. Please wait a moment and try again.");
@@ -541,7 +525,6 @@ const Login: React.FC = () => {
                   <div className="divider-line"/>
                 </div>
 
-                {/* Visible custom-styled button that safely calls the public prompt window */}
                 <button
                   type="button"
                   onClick={triggerGooglePopup}

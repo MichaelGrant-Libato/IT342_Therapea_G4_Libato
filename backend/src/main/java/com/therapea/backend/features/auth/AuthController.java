@@ -10,7 +10,6 @@ import com.therapea.backend.features.users.UserEntity;
 import com.therapea.backend.features.users.UserRepository;
 import com.therapea.backend.core.EmailNotificationService;
 import com.therapea.backend.features.users.UserService;
-import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -261,7 +260,16 @@ public class AuthController {
                         if ("REJECTED".equals(user.getStatus())) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Your application was declined."));
                         if (user.getIsActive() != null && !user.getIsActive()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Your account is deactivated."));
                     }
-                    return ResponseEntity.ok(mapToDTO(user, "Google Login successful"));
+
+                    // Generate and dispatch OTP tracking context natively for verified Google users
+                    otpService.generateAndSendOtp(email, "LOGIN");
+
+                    return ResponseEntity.ok(Map.of(
+                            "success", true,
+                            "requiresOtp", true,
+                            "email", email,
+                            "message", "Google verification successful. A security code has been sent to your email."
+                    ));
                 } else {
                     return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("email", email, "fullName", (String) payload.get("name"), "error", "User not found."));
                 }
@@ -270,6 +278,34 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Token verification failed."));
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid Google Token"));
+    }
+
+    @PostMapping("/google-verify-login")
+    public ResponseEntity<?> googleVerifyLogin(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String otp = request.get("otp");
+
+        if (email == null || otp == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email and OTP are required parameters."));
+        }
+
+        boolean isValid = otpService.verifyOtp(email, otp);
+
+        if (!isValid) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid or expired verification code"));
+        }
+
+        try {
+            UserEntity user = userService.getUserByEmail(email);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Account not found."));
+            }
+
+            otpService.clearVerification(email);
+            return ResponseEntity.ok(mapToDTO(user, "Google Login successful"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Failed to construct session mapping DTO."));
+        }
     }
 
     @PostMapping("/login")

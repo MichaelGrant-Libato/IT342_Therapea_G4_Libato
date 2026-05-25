@@ -28,17 +28,28 @@ import java.util.UUID;
 @RequestMapping("/api/auth")
 public class GoogleAuthController {
 
-    @Autowired private UserService userService;
-    @Autowired private OTPService otpService;
+    @Autowired
+    private UserService userService;
 
-    @Value("${google.client.id}")     private String googleClientId;
-    @Value("${google.client.secret}") private String googleClientSecret;
-    @Value("${google.redirect.uri}")  private String redirectUri;
+    @Autowired
+    private OTPService otpService;
+
+    // ── FIXED ENVIRONMENT VARIABLES ──────────────────────────────────────────
+    @Value("${GOOGLE_CLIENT_ID}")
+    private String googleClientId;
+
+    @Value("${GOOGLE_CLIENT_SECRET}")
+    private String googleClientSecret;
+
+    @Value("${GOOGLE_REDIRECT_URI:http://localhost:8083/api/auth/google/callback}")
+    private String redirectUri;
+
+    @Value("${VITE_API_BASE_URL:http://localhost:5173}")
+    private String FRONTEND_URL;
 
     private static final String GOOGLE_AUTH_URL     = "https://accounts.google.com/o/oauth2/v2/auth";
     private static final String GOOGLE_TOKEN_URL    = "https://oauth2.googleapis.com/token";
     private static final String GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
-    private static final String FRONTEND_URL        = "http://localhost:5173";
 
     // ── Step 1: Generate Google OAuth2 URL ───────────────────────────────
     @GetMapping("/google-register-url")
@@ -63,7 +74,6 @@ public class GoogleAuthController {
                     + "&prompt=consent"
                     + "&state="        + state;
 
-            // Log the redirect URI so you can compare it with Google Cloud Console
             System.out.println("🔗 OAuth URL generated. redirect_uri = " + redirectUri);
 
             return ResponseEntity.ok(Map.of("success", true, "url", authUrl, "state", state));
@@ -89,7 +99,6 @@ public class GoogleAuthController {
         }
 
         System.out.println("🔄 OAuth callback received. Exchanging code for token...");
-        System.out.println("   redirect_uri being sent to Google token endpoint: " + redirectUri);
 
         try {
             RestTemplate restTemplate = new RestTemplate();
@@ -99,7 +108,7 @@ public class GoogleAuthController {
             tokenRequest.add("code",          code);
             tokenRequest.add("client_id",     googleClientId);
             tokenRequest.add("client_secret", googleClientSecret);
-            tokenRequest.add("redirect_uri",  redirectUri);   // must match EXACTLY
+            tokenRequest.add("redirect_uri",  redirectUri);
             tokenRequest.add("grant_type",    "authorization_code");
 
             HttpHeaders tokenHeaders = new HttpHeaders();
@@ -115,12 +124,8 @@ public class GoogleAuthController {
                 );
                 tokenResponse = tr;
             } catch (HttpClientErrorException ex) {
-                // ── Surface the REAL Google error message ─────────────────
                 System.err.println("❌ Token exchange failed: HTTP " + ex.getStatusCode());
                 System.err.println("   Google error body: " + ex.getResponseBodyAsString());
-                System.err.println("   Verify these match Google Cloud Console exactly:");
-                System.err.println("   client_id    = " + googleClientId.substring(0, Math.min(20, googleClientId.length())) + "...");
-                System.err.println("   redirect_uri = " + redirectUri);
                 sendPopupMessage(httpResponse, "error", null, null);
                 return;
             }
@@ -195,7 +200,6 @@ public class GoogleAuthController {
 
         } catch (Exception e) {
             System.err.println("❌ OAuth callback exception: " + e.getClass().getName() + ": " + e.getMessage());
-            e.printStackTrace();
             sendPopupMessage(httpResponse, "error", null, null);
         }
     }
