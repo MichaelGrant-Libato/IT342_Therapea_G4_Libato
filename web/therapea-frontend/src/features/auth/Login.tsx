@@ -174,7 +174,7 @@ const Login: React.FC = () => {
     finally { setIsLoading(false); }
   };
 
-  const handleGoogleCredentialResponse = async (response: any) => {
+const handleGoogleCredentialResponse = async (response: any) => {
     setIsLoading(true); setError(''); setSuccess('');
     try {
       const token = response.credential;
@@ -188,12 +188,11 @@ const Login: React.FC = () => {
 
       const data = await res.json();
 
-      // If the backend indicates an initial successful profile match, intercept and fire the OTP prompt chain
+      // If the backend indicates a successful profile match, intercept and fire the OTP prompt chain
       if (res.ok || (res.status === 200 && data.email)) {
         setGoogleEmail(data.email);
         sendOtp(data.email, 'LOGIN');
       } else if (res.status === 404 && data.email) {
-        // Handle unmapped accounts context cleanly
         setGoogleEmail(data.email);
         sendOtp(data.email, 'LOGIN');
       } else {
@@ -206,6 +205,7 @@ const Login: React.FC = () => {
     }
   };
 
+  // Wire up the Google configuration ONCE on initialization
   useEffect(() => {
     if ((window as any).google) {
       (window as any).google.accounts.id.initialize({
@@ -215,15 +215,20 @@ const Login: React.FC = () => {
         itp_support: true
       });
     }
+    // REMOVED: No background automatic prompt rendering here to keep the credential pipeline clear
   }, [API_BASE_URL]); 
 
+  // Clean button listener that launches the popup directly on user click
   const triggerGooglePopup = () => {
     if ((window as any).google) {
-      (window as any).google.accounts.id.prompt((notification: any) => {
-        if (notification.isSkippedMoment() || notification.isDismissedMoment()) {
-          (window as any).google.accounts.id.prompt();
-        }
+      // Clear previous overlay contexts and force open the account chooser popup cleanly
+      (window as any).google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "275088762622-rehu8gq0gi8m0fhspele0dp7q2g4bg3d.apps.googleusercontent.com",
+        callback: handleGoogleCredentialResponse,
+        ux_mode: "popup",
+        itp_support: true
       });
+      (window as any).google.accounts.id.prompt();
     } else {
       setError("Google SDK failed to load. Please refresh the page.");
     }
