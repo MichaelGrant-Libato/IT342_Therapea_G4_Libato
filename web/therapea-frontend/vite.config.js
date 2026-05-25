@@ -10,8 +10,10 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       }
-      
     }
-    
+  },
+
+  preview: {
+    allowedHosts: true
   }
 })
