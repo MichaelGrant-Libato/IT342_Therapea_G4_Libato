@@ -4,7 +4,7 @@ import "./Login.css";
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8083';
+  const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8083';
 
   // Base Login State
   const [formData, setFormData]     = useState({ email: '', password: '' });
@@ -17,6 +17,7 @@ const Login: React.FC = () => {
   const [googleEmail, setGoogleEmail] = useState('');
   const [showOtpFlow, setShowOtpFlow] = useState(false);
   const [otpCode, setOtpCode]         = useState('');
+  const [storedIdToken, setStoredIdToken] = useState(''); // Holds the validated credential string for multi-step OTP matching
 
   // FORGOT PASSWORD MODAL STATE
   const [forgotStep, setForgotStep] = useState(0); 
@@ -106,6 +107,7 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true); setError(''); setSuccess('');
     try {
+      // 1. Verify that the user inputted code matches the issued transaction
       const verifyRes  = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,10 +116,11 @@ const Login: React.FC = () => {
 
       if (!verifyRes.ok) { setError(await parseError(verifyRes)); setIsLoading(false); return; }
 
-      const userRes = await fetch(`${API_BASE_URL}/api/auth/google-login`, {
+      // 2. Route directly back to your secure profile check using the verified token payload wrapper
+      const userRes = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: googleEmail })
+        body: JSON.stringify({ idToken: storedIdToken })
       });
       
       if (userRes.ok) {
@@ -132,7 +135,7 @@ const Login: React.FC = () => {
       } else {
         setError(await parseError(userRes));
       }
-    } catch { setError('Connection error.'); } 
+    } catch { setError('Connection error handling profile mapping.'); } 
     finally { setIsLoading(false); }
   };
 
@@ -171,14 +174,17 @@ const Login: React.FC = () => {
     finally { setIsLoading(false); }
   };
 
-  // Direct production authentication handler using the native credential payload token
+  // Direct production authentication handler parsing directly to Spring Boot backend controller logic
   const handleGoogleCredentialResponse = async (response: any) => {
     setIsLoading(true); setError(''); setSuccess('');
     try {
+      const token = response.credential;
+      setStoredIdToken(token); // Store the session token reference locally for the verification step
+
       const res = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: response.credential }),
+        body: JSON.stringify({ idToken: token }),
       });
 
       const data = await res.json();
@@ -192,6 +198,7 @@ const Login: React.FC = () => {
         setSuccess('Google Login successful! Redirecting...');
         setTimeout(() => handleRoleBasedNavigation(data.role), 1500);
       } else {
+        // Handle explicit account tracking falls when profile data does not yet exist
         if (res.status === 404 && data.email) {
           setGoogleEmail(data.email);
           sendOtp(data.email, 'LOGIN');
@@ -451,7 +458,6 @@ const Login: React.FC = () => {
                   <div className="divider-line"/>
                 </div>
 
-                {/* This button now interfaces directly via the initialized Google Identity Services pipeline */}
                 <button type="button" onClick={triggerGooglePopup} className="google-button" disabled={isLoading}>
                   <svg className="google-icon" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
