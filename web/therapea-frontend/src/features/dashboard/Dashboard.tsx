@@ -55,7 +55,7 @@ const statusStyle = (s: string): React.CSSProperties =>
     : { background: '#F8FAFC', color: '#6B7280', border: '1px solid #E5E7EB' };
 
 const NavIcon = ({ type }: { type: string }) => {
-  const paths: Record<string, JSX.Element> = {
+  const paths: Record<string, React.ReactNode> = {
     calendar:  <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
     clipboard: <><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></>,
     users:     <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></>,
@@ -283,7 +283,14 @@ const PatientView: React.FC<{ assessments: Assessment[]; appointments: Appointme
                   </div>
                 </div>
               </div>
-              <button className="db-join-btn" onClick={() => navigate('/video-room')}>Join video call</button>
+              <button
+                className="db-join-btn"
+                onClick={() =>
+                  navigate(`/video-room?appointmentId=${encodeURIComponent(String(upcomingApt.id))}`)
+                }
+              >
+                Join video call
+              </button>
             </div>
           ) : lastCompletedApt ? (
             <div className="db-empty" style={{ padding: '20px 0', alignItems: 'flex-start', textAlign: 'left' }}>
@@ -541,7 +548,14 @@ const DoctorView: React.FC<{ assessments: Assessment[]; appointments: Appointmen
                     <div className="custom-sch-type">{apt.type}</div>
                   </div>
                   {apt.type === 'Telehealth' ? (
-                    <button className="db-join-btn small" onClick={() => navigate('/video-room')}><NavIcon type="video" /> Join</button>
+                  <button
+                    className="db-join-btn small"
+                    onClick={() =>
+                      navigate(`/video-room?appointmentId=${encodeURIComponent(String(apt.id))}`)
+                    }
+                  >
+                    Join
+                  </button>
                   ) : (
                     <span className="db-card-chip" style={{ background: '#e2e8f0', color: '#475569', fontWeight: 600 }}>Clinic</span>
                   )}

@@ -13,6 +13,7 @@ import android.widget.*
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import com.therapea.app.features.therapists.TherapistProfileActivity
 import kotlinx.coroutines.*
@@ -41,6 +42,11 @@ class FindTherapistActivity : Activity() {
     private val client = OkHttpClient()
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val ITEMS_PER_PAGE = 6
+
+    private val apiBaseUrl = BuildConfig.BASE_URL
+        .removeSuffix("/api/")
+        .removeSuffix("/api")
+        .trimEnd('/') + "/"
 
     private var masterList   = mutableListOf<TherapistData>()
     private var filteredList = mutableListOf<TherapistData>()
@@ -131,7 +137,9 @@ class FindTherapistActivity : Activity() {
 
         scope.launch(Dispatchers.IO) {
             try {
-                val request  = Request.Builder().url("http://10.0.2.2:8083/api/doctors/list").build()
+                val request = Request.Builder()
+                    .url("${apiBaseUrl}api/doctors/list")
+                    .build()
                 val response = client.newCall(request).execute()
                 val data     = JSONObject(response.body?.string() ?: "{}")
 

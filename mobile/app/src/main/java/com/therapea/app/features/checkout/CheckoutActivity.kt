@@ -61,7 +61,10 @@ class CheckoutActivity : Activity() {
     private var receiptBalance   = 0
 
     private val currentMonth = Calendar.getInstance()
-    private val apiBaseUrl   = "http://10.0.2.2:8083"
+    private val apiBaseUrl = BuildConfig.BASE_URL
+        .removeSuffix("/api/")
+        .removeSuffix("/api")
+        .trimEnd('/') + "/"
 
     // ── Canonical date format used everywhere on mobile ───────────────────
     private val DATE_FMT = SimpleDateFormat("EEE, MMM d, yyyy", Locale.US)
@@ -248,7 +251,7 @@ class CheckoutActivity : Activity() {
                     .put("status",            "Scheduled")
                     .toString()
 
-                post("$apiBaseUrl/api/appointments/book", payload)
+                post("${apiBaseUrl}api/appointments/book", payload)
             } catch (e: Exception) {
                 android.util.Log.e("Checkout", "Post-payment save failed: ${e.message}")
             }
@@ -290,7 +293,7 @@ class CheckoutActivity : Activity() {
 
         Thread {
             try {
-                val json    = JSONObject(get("$apiBaseUrl/api/doctors/list"))
+                val json    = JSONObject(get("${apiBaseUrl}api/doctors/list"))
                 val doctors = json.optJSONArray("doctors") ?: JSONArray()
                 val first   = if (doctors.length() > 0) parseTherapist(doctors.getJSONObject(0)) else null
 
@@ -325,7 +328,7 @@ class CheckoutActivity : Activity() {
 
         Thread {
             try {
-                val url     = "$apiBaseUrl/api/appointments/provider/${encode(t.name)}"
+                val url = "${apiBaseUrl}api/appointments/provider/${encode(t.name)}"
                 val rawJson = get(url)
 
                 android.util.Log.d("Checkout", "loadBookedSlots URL: $url")
@@ -1078,7 +1081,7 @@ class CheckoutActivity : Activity() {
                     .put("source",      "mobile")
                     .toString()
 
-                val responseStr = post("$apiBaseUrl/api/payments/create-link", payload)
+                val responseStr = post("${apiBaseUrl}api/payments/create-link", payload)
                 android.util.Log.d("PAYMONGO_RESPONSE", responseStr)
 
                 val json        = JSONObject(responseStr)
@@ -1142,7 +1145,7 @@ class CheckoutActivity : Activity() {
                     .put("status",            "Scheduled")
                     .toString()
 
-                post("$apiBaseUrl/api/appointments/book", payload)
+                post("${apiBaseUrl}api/appointments/book", payload)
 
                 runOnUiThread {
                     receiptReference  = "THP-${paymongoReferenceNumber.ifBlank { System.currentTimeMillis().toString() }}"

@@ -15,6 +15,7 @@ import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.material.navigation.NavigationView
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import com.therapea.app.features.appointments.AppointmentsActivity
 import com.therapea.app.features.assessment.AssessmentResultActivity
@@ -37,7 +38,7 @@ import java.net.URLEncoder
 
 class DoctorHomeActivity : Activity() {
 
-    private val API_BASE_URL = "http://10.0.2.2:8083"
+    private val API_BASE_URL = BuildConfig.BASE_URL.trimEnd('/')
     private val client = OkHttpClient()
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var doctorEmail = ""

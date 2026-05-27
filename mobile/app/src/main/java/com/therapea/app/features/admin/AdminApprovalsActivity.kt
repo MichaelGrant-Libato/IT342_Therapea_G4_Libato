@@ -16,6 +16,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import com.therapea.app.features.auth.LoginActivity
 import kotlinx.coroutines.*
@@ -29,7 +30,7 @@ import org.json.JSONTokener
 
 class AdminApprovalsActivity : Activity() {
 
-    private val apiBaseUrl = "http://10.0.2.2:8083"
+    private val apiBaseUrl = BuildConfig.BASE_URL.trimEnd('/') + "/"
     private val client = OkHttpClient()
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
@@ -167,7 +168,7 @@ class AdminApprovalsActivity : Activity() {
 
         scope.launch {
             try {
-                val body = get("$apiBaseUrl/api/admin/doctors")
+                val body = get("${apiBaseUrl}api/admin/doctors")
                 val loadedDoctors = parseDoctors(body)
 
                 doctors.clear()
@@ -188,7 +189,7 @@ class AdminApprovalsActivity : Activity() {
 
         scope.launch {
             try {
-                post("$apiBaseUrl/api/admin/doctors/${doctor.id}/approve", null)
+                post("${apiBaseUrl}api/admin/doctors/${doctor.id}/approve", null)
                 doctor.status = Status.APPROVED
                 showBanner("Doctor approved successfully.", true)
             } catch (_: Exception) {
@@ -207,7 +208,7 @@ class AdminApprovalsActivity : Activity() {
         scope.launch {
             try {
                 val payload = JSONObject().put("reason", reason)
-                post("$apiBaseUrl/api/admin/doctors/${doctor.id}/reject", payload.toString())
+                post("${apiBaseUrl}api/admin/doctors/${doctor.id}/reject", payload.toString())
 
                 doctors.removeAll { it.id == doctor.id }
                 showBanner("Application declined. Account has been removed.", true)
@@ -481,7 +482,7 @@ class AdminApprovalsActivity : Activity() {
     private fun loadAdminSettings() {
         scope.launch {
             try {
-                val body = get("$apiBaseUrl/api/admin/settings")
+                val body = get("${apiBaseUrl}api/admin/settings")
                 val data = JSONObject(body)
                 saveSettingsLocal(data)
                 if (activeSection == Section.SETTINGS) renderContentOnly()
@@ -497,7 +498,7 @@ class AdminApprovalsActivity : Activity() {
 
         scope.launch {
             try {
-                put("$apiBaseUrl/api/admin/settings", payload.toString())
+                put("${apiBaseUrl}api/admin/settings", payload.toString())
                 showBanner("Settings saved successfully.", true)
             } catch (_: Exception) {
                 showBanner("Settings saved on this device. Backend sync is unavailable right now.", true)
@@ -566,7 +567,7 @@ class AdminApprovalsActivity : Activity() {
             ${doctor.clinicalBio.ifBlank { "No biography provided." }}
             
             PRC License:
-            ${doctor.prcLicenseUrl.ifBlank { "$apiBaseUrl/api/admin/doctors/${doctor.id}/prc-license" }}
+            ${doctor.prcLicenseUrl.ifBlank { "${apiBaseUrl}api/admin/doctors/${doctor.id}/prc-license" }}
         """.trimIndent()
 
         AlertDialog.Builder(this)
@@ -579,7 +580,7 @@ class AdminApprovalsActivity : Activity() {
 
     private fun openPrcLicense(doctor: DoctorRequest) {
         val link = doctor.prcLicenseUrl.ifBlank {
-            "$apiBaseUrl/api/admin/doctors/${doctor.id}/prc-license"
+            "${apiBaseUrl}api/admin/doctors/${doctor.id}/prc-license"
         }
 
         try {

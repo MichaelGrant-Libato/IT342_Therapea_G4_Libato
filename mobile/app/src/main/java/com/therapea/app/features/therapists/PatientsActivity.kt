@@ -13,6 +13,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import com.therapea.app.features.therapists.adapter.PatientAdapter
 import com.therapea.app.features.therapists.adapter.RecordAdapter
@@ -87,7 +88,7 @@ class PatientsActivity : Activity() {
             return
         }
 
-        val url = "http://10.0.2.2:8083/api/patients/doctor?email=$email"
+        val url = "${BuildConfig.BASE_URL}patients/doctor?email=$email"
         val request = Request.Builder().url(url).build()
 
         OkHttpClient().newCall(request).enqueue(object : Callback {
@@ -193,8 +194,8 @@ class PatientsActivity : Activity() {
 
         dialog.show()
 
-        val url =
-            "http://10.0.2.2:8083/api/progress/patient?email=${patient.email}"
+        val encodedEmail = java.net.URLEncoder.encode(patient.email, "UTF-8")
+        val url = "${BuildConfig.BASE_URL}progress/patient?email=$encodedEmail"
 
         val request = Request.Builder()
             .url(url)

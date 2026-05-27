@@ -7,18 +7,22 @@
     android:background="#111827"
     android:keepScreenOn="true">
 
+    <!-- MAIN CALL SCREEN -->
     <FrameLayout
         android:id="@+id/callLayer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#000000">
+        android:background="#000000"
+        android:visibility="gone">
 
+        <!-- REMOTE VIDEO SHOULD APPEAR HERE -->
         <FrameLayout
             android:id="@+id/remoteVideoContainer"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:background="#000000" />
+            android:background="#050505" />
 
+        <!-- WAITING TEXT -->
         <TextView
             android:id="@+id/tvWaiting"
             android:layout_width="match_parent"
@@ -31,13 +35,14 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <!-- CALL STATUS -->
         <TextView
             android:id="@+id/tvCallStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="top|center_horizontal"
             android:layout_marginTop="26dp"
-            android:background="#801F2937"
+            android:background="#CC1F2937"
             android:paddingHorizontal="16dp"
             android:paddingVertical="8dp"
             android:text="Joining..."
@@ -45,6 +50,22 @@
             android:textSize="13sp"
             android:textStyle="bold" />
 
+        <!-- DEBUG OVERLAY -->
+        <TextView
+            android:id="@+id/tvDebug"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:layout_marginTop="72dp"
+            android:layout_marginHorizontal="12dp"
+            android:background="#CC111827"
+            android:padding="10dp"
+            android:text="Debug status"
+            android:textColor="#FBBF24"
+            android:textSize="11sp"
+            android:visibility="gone" />
+
+        <!-- LOCAL PREVIEW CARD -->
         <FrameLayout
             android:id="@+id/localPreviewCard"
             android:layout_width="138dp"
@@ -74,6 +95,7 @@
                 android:visibility="gone" />
         </FrameLayout>
 
+        <!-- CALL CONTROLS -->
         <LinearLayout
             android:id="@+id/callControls"
             android:layout_width="match_parent"
@@ -125,6 +147,7 @@
         </LinearLayout>
     </FrameLayout>
 
+    <!-- LOBBY SCREEN -->
     <LinearLayout
         android:id="@+id/lobbyOverlay"
         android:layout_width="match_parent"
@@ -179,4 +202,5 @@
             android:textColor="#6B7280"
             android:textSize="13sp" />
     </LinearLayout>
+
 </FrameLayout>

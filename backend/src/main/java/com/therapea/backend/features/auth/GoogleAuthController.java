@@ -41,11 +41,11 @@ public class GoogleAuthController {
     @Value("${GOOGLE_CLIENT_SECRET}")
     private String googleClientSecret;
 
-    @Value("${GOOGLE_REDIRECT_URI:http://localhost:8083/api/auth/google/callback}")
+    @Value("${GOOGLE_REDIRECT_URI=http://192.168.1.4:8083/api/auth/google/callback}")
     private String redirectUri;
 
-    @Value("${VITE_API_BASE_URL:http://localhost:5173}")
-    private String FRONTEND_URL;
+    @Value("${frontend.url:http://localhost}")
+    private String frontendUrl;
 
     private static final String GOOGLE_AUTH_URL     = "https://accounts.google.com/o/oauth2/v2/auth";
     private static final String GOOGLE_TOKEN_URL    = "https://oauth2.googleapis.com/token";
@@ -225,7 +225,7 @@ public class GoogleAuthController {
               window.close();
             </script>
             </body></html>
-            """.formatted(type, emailJs, nameJs, FRONTEND_URL));
+            """.formatted(type, emailJs, nameJs, frontendUrl));
     }
 
     // ── Complete Google profile ───────────────────────────────────────────

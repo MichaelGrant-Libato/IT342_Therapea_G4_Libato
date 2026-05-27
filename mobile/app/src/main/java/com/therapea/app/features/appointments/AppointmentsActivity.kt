@@ -12,6 +12,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import com.therapea.app.features.map.FindTherapistActivity
 import com.therapea.app.features.video.VideoRoomActivity
@@ -43,6 +44,7 @@ class AppointmentsActivity : Activity() {
     private lateinit var calendarGrid:             GridLayout
     private lateinit var selectedDayContainer:     LinearLayout
 
+
     private var activeTab       = Tab.UPCOMING
     private var isLoading       = false
     private var isActionLoading = false
@@ -51,7 +53,10 @@ class AppointmentsActivity : Activity() {
 
     private val appointments = mutableListOf<AppointmentData>()
     private val currentMonth = Calendar.getInstance()
-    private val apiBaseUrl   = "http://10.0.2.2:8083"
+    private val apiBaseUrl = BuildConfig.BASE_URL
+        .removeSuffix("/api/")
+        .removeSuffix("/api")
+        .trimEnd('/') + "/"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -122,7 +127,7 @@ class AppointmentsActivity : Activity() {
         Thread {
             try {
                 val loaded = parseAppointments(JSONObject(
-                    get("$apiBaseUrl/api/appointments/user?email=${encode(userEmail)}")
+                    get("${apiBaseUrl}api/appointments/user?email=${encode(userEmail)}")
                 ))
                 runOnUiThread { appointments.clear(); appointments.addAll(loaded); isLoading = false; render() }
             } catch (_: Exception) {
@@ -139,7 +144,7 @@ class AppointmentsActivity : Activity() {
         isActionLoading = true; render()
         Thread {
             try {
-                patch("$apiBaseUrl/api/appointments/${appointment.id}/cancel", JSONObject().put("reason", reason).toString())
+                patch("${apiBaseUrl}api/appointments/${appointment.id}/cancel", JSONObject().put("reason", reason).toString())
                 runOnUiThread {
                     appointment.status = "Canceled"; isActionLoading = false
                     Toast.makeText(this, "Appointment canceled.", Toast.LENGTH_SHORT).show(); render()
@@ -154,7 +159,7 @@ class AppointmentsActivity : Activity() {
         isActionLoading = true; render()
         Thread {
             try {
-                delete("$apiBaseUrl/api/appointments/${appointment.id}")
+                delete("${apiBaseUrl}api/appointments/${appointment.id}")
                 runOnUiThread {
                     appointments.removeAll { it.id == appointment.id }; isActionLoading = false
                     Toast.makeText(this, "Deleted.", Toast.LENGTH_SHORT).show(); render()

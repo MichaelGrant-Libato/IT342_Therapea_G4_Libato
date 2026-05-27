@@ -10,6 +10,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import kotlinx.coroutines.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -22,7 +23,7 @@ import java.net.URLEncoder
 
 class NotificationsActivity : Activity() {
 
-    private val API_BASE_URL = "http://10.0.2.2:8083"
+    private val API_BASE_URL = BuildConfig.BASE_URL.trimEnd('/')
     private val client = OkHttpClient()
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var userEmail = ""
@@ -48,7 +49,9 @@ class NotificationsActivity : Activity() {
 
     private fun fetchNotifications() = scope.launch(Dispatchers.IO) {
         try {
-            val req = Request.Builder().url("$API_BASE_URL/api/notifications?email=${URLEncoder.encode(userEmail, "UTF-8")}").build()
+            val req = Request.Builder()
+                .url("${API_BASE_URL}notifications?email=${URLEncoder.encode(userEmail, "UTF-8")}")
+                .build()
             val res = client.newCall(req).execute()
             if (res.isSuccessful) {
                 val data = JSONObject(res.body?.string() ?: "{}")
@@ -191,7 +194,12 @@ class NotificationsActivity : Activity() {
 
     private fun patchNotif(endpoint: String) = scope.launch(Dispatchers.IO) {
         try {
-            client.newCall(Request.Builder().url("$API_BASE_URL/api/notifications/$endpoint").patch("".toRequestBody("application/json".toMediaTypeOrNull())).build()).execute()
+            client.newCall(
+                Request.Builder()
+                    .url("${API_BASE_URL}notifications/$endpoint")
+                    .patch("".toRequestBody("application/json".toMediaTypeOrNull()))
+                    .build()
+            ).execute()
             fetchNotifications() // Refresh UI
         } catch (_: Exception) {}
     }

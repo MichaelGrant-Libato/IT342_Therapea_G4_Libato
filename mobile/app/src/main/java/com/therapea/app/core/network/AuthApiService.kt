@@ -7,26 +7,26 @@ import retrofit2.http.*
 
 interface AuthApiService {
 
-    @POST("auth/login")
+    @POST("api/auth/login")
     suspend fun login(@Body request: LoginRequest): Response<DashboardDTO>
 
-    @POST("auth/register")
+    @POST("api/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<DashboardDTO>
 
-    @POST("auth/google-check")
+    @POST("api/auth/google-check")
     suspend fun googleCheck(@Body body: Map<String, String>): Response<DashboardDTO>
 
-    @POST("auth/send-otp")
+    @POST("api/auth/send-otp")
     suspend fun sendOtp(@Body body: Map<String, String>): Response<OtpResponse>
 
-    @POST("auth/verify-otp")
+    @POST("api/auth/verify-otp")
     suspend fun verifyOtp(@Body body: Map<String, String>): Response<OtpResponse>
 
-    @POST("auth/google-login")
+    @POST("api/auth/google-login")
     suspend fun googleLogin(@Body body: Map<String, String>): Response<DashboardDTO>
 
     @Multipart
-    @POST("auth/doctor-verification")
+    @POST("api/auth/doctor-verification")
     suspend fun doctorVerification(
         @Part("email") email: RequestBody,
         @Part("clinicalBio") bio: RequestBody,

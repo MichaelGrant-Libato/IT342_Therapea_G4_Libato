@@ -201,7 +201,7 @@ const Appointments: React.FC = () => {
                       </div>
                       <div className="appt-actions">
                         {isOnline && !isPast ? (
-                          <button className="appt-btn-primary" onClick={(e) => { e.stopPropagation(); navigate('/video-room'); }}>Join Video</button>
+                          <button className="appt-btn-primary" onClick={(e) => { e.stopPropagation(); navigate(`/video-room?appointmentId=${encodeURIComponent(String(apt.id))}`); }}>Join Video</button>
                         ) : isOnline && isPast ? (
                           <span style={{ padding: '8px 16px', backgroundColor: '#E2E8F0', color: '#94A3B8', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold' }}>Video Ended</span>
                         ) : (
@@ -250,7 +250,7 @@ const Appointments: React.FC = () => {
                           
                           {/* Conditional Video / Clinic logic */}
                           {isOnline ? (
-                            <button className="appt-btn-primary" onClick={(e) => { e.stopPropagation(); navigate('/video-room'); }}>Join Video</button>
+                            <button className="appt-btn-primary" onClick={(e) => { e.stopPropagation(); navigate(`/video-room?appointmentId=${encodeURIComponent(String(apt.id))}`); }}>Join Video</button>
                           ) : (
                             <span style={{ padding: '8px 16px', backgroundColor: '#F1F5F9', color: '#64748B', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold' }}>Clinic / On-Site</span>
                           )}

@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.widget.*
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -34,7 +35,7 @@ class ReferenceActivity : Activity() {
 
     // Emulator: 10.0.2.2 reaches your computer localhost.
     // Real phone: replace this with your computer LAN IP.
-    private val apiBaseUrl = "http://10.0.2.2:8083"
+    private val apiBaseUrl = BuildConfig.BASE_URL.trimEnd('/') + "/"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -101,7 +102,7 @@ class ReferenceActivity : Activity() {
         Thread {
             try {
                 val url =
-                    "$apiBaseUrl/api/auth/check-status?ref=${encode(referenceNumber)}&email=${encode(email)}"
+                    "${apiBaseUrl}api/auth/check-status?ref=${encode(referenceNumber)}&email=${encode(email)}"
 
                 val response = get(url)
                 val json = JSONObject(response)

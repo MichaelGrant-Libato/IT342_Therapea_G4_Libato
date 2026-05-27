@@ -15,6 +15,7 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import org.json.JSONArray
 import org.json.JSONObject
@@ -32,7 +33,7 @@ class MessagesActivity : Activity() {
     private lateinit var tvStatus:        TextView
 
     private val handler    = Handler(Looper.getMainLooper())
-    private val apiBaseUrl = "http://10.0.2.2:8083"
+    private val apiBaseUrl = BuildConfig.BASE_URL.trimEnd('/') + "/"
 
     private var currentUser: UserData? = null
     private val contacts     = mutableListOf<ContactData>()
@@ -131,7 +132,7 @@ class MessagesActivity : Activity() {
     }
 
     private fun loadDoctorContacts(email: String): List<ContactData> {
-        val json = JSONObject(get("$apiBaseUrl/api/patients/doctor?email=${encode(email)}"))
+        val json = JSONObject(get("${apiBaseUrl}api/patients/doctor?email=${encode(email)}"))
         if (!json.optBoolean("success", false)) return emptyList()
 
         val patients   = json.optJSONArray("patients") ?: JSONArray()
@@ -158,7 +159,7 @@ class MessagesActivity : Activity() {
     }
 
     private fun loadPatientContacts(email: String): List<ContactData> {
-        val json = JSONObject(get("$apiBaseUrl/api/appointments/user?email=${encode(email)}"))
+        val json = JSONObject(get("${apiBaseUrl}api/appointments/user?email=${encode(email)}"))
         if (!json.optBoolean("success", false)) return emptyList()
 
         val appointments = json.optJSONArray("appointments") ?: JSONArray()
@@ -190,7 +191,7 @@ class MessagesActivity : Activity() {
             contacts.forEach { contact ->
                 try {
                     val json = JSONObject(get(
-                        "$apiBaseUrl/api/messages?user1=${encode(user.email)}&user2=${encode(contact.email)}"
+                        "${apiBaseUrl}api/messages?user1=${encode(user.email)}&user2=${encode(contact.email)}"
                     ))
                     val arr = json.optJSONArray("messages") ?: JSONArray()
                     if (arr.length() > 0) {

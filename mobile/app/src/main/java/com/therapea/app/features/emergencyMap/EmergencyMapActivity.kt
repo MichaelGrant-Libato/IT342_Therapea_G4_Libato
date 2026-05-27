@@ -28,6 +28,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.button.MaterialButton
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
@@ -58,7 +59,7 @@ data class RouteStats(
 
 class EmergencyMapActivity : Activity() {
 
-    private val apiBaseUrl = "http://10.0.2.2:8083"
+    private val apiBaseUrl = BuildConfig.BASE_URL.trimEnd('/') + "/"
     private val client = OkHttpClient()
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -229,7 +230,7 @@ class EmergencyMapActivity : Activity() {
         scope.launch(Dispatchers.IO) {
             try {
                 val request = Request.Builder()
-                    .url("$apiBaseUrl/api/emergency/facilities")
+                    .url("${apiBaseUrl}api/emergency/facilities")
                     .get()
                     .build()
 

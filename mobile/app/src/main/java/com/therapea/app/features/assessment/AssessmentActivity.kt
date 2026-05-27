@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.view.View
 import android.widget.*
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import com.therapea.app.features.emergencyMap.EmergencyMapActivity
 import com.therapea.app.features.map.FindTherapistActivity
@@ -64,9 +65,7 @@ class AssessmentActivity : Activity() {
 
     private val answers = MutableList(QUESTIONS.size) { -1 }
 
-    // Emulator: 10.0.2.2 reaches your computer localhost.
-    // Real phone: replace this with your computer LAN IP.
-    private val apiBaseUrl = "http://10.0.2.2:8083"
+    private val apiBaseUrl = BuildConfig.BASE_URL.trimEnd('/') + "/"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -361,7 +360,7 @@ class AssessmentActivity : Activity() {
                     .put("answers",        JSONArray(answers))
                     .toString()
 
-                val json    = JSONObject(post("$apiBaseUrl/api/assessments/save", body))
+                val json    = JSONObject(post("${apiBaseUrl}api/assessments/save", body))
                 val success = json.optBoolean("success", true)
 
                 runOnUiThread {

@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.*
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import org.json.JSONArray
 import org.json.JSONObject
@@ -36,7 +37,7 @@ class ChatActivity : Activity() {
     private lateinit var btnSendMessage:          Button
 
     private val handler    = Handler(Looper.getMainLooper())
-    private val apiBaseUrl = "http://10.0.2.2:8083"
+    private val apiBaseUrl = BuildConfig.BASE_URL.trimEnd('/') + "/"
     private val messages   = mutableListOf<MessageData>()
 
     private var contactEmail          = ""
@@ -112,7 +113,7 @@ class ChatActivity : Activity() {
         Thread {
             try {
                 val json = JSONObject(get(
-                    "$apiBaseUrl/api/messages?user1=${encode(myEmail)}&user2=${encode(contactEmail)}"
+                    "${apiBaseUrl}api/messages?user1=${encode(myEmail)}&user2=${encode(contactEmail)}"
                 ))
                 val arr     = json.optJSONArray("messages") ?: JSONArray()
                 val fetched = (0 until arr.length()).map { i ->
@@ -164,7 +165,7 @@ class ChatActivity : Activity() {
                     .put("receiverEmail", contactEmail)
                     .put("content",       text)
                     .toString()
-                post("$apiBaseUrl/api/messages/send", body)
+                post("${apiBaseUrl}api/messages/send", body)
                 runOnUiThread {
                     isSending                = false
                     btnSendMessage.isEnabled = true

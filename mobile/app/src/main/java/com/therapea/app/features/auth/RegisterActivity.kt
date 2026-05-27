@@ -11,6 +11,7 @@ import android.view.View
 import android.widget.*
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import com.therapea.app.features.home.HomeActivity
 import kotlinx.coroutines.*
@@ -25,7 +26,7 @@ import java.io.FileOutputStream
 
 class RegisterActivity : Activity() {
 
-    private val API_BASE_URL = "http://10.0.2.2:8083"
+    private val API_BASE_URL = BuildConfig.BASE_URL.trimEnd('/')
     private val client = OkHttpClient()
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val JSON = "application/json; charset=utf-8".toMediaType()

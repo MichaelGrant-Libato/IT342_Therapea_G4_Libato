@@ -5,6 +5,7 @@ import "./Login.css";
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8083';
+  const apiUrl = (path: string) => `${API_BASE_URL}${path}`;
 
   // Base Login State
   const [formData, setFormData]     = useState({ email: '', password: '' });
@@ -69,11 +70,11 @@ const Login: React.FC = () => {
     setIsLoading(true); setError(''); setSuccess('');
     try {
       const token = response.credential;
-      const res = await fetch(`${API_BASE_URL}/api/auth/google-check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: token }),
-      });
+      const res = await fetch(apiUrl('/api/auth/google-check'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: token }),
+    });
       const data = await res.json();
       if (res.ok || res.status === 200 || (res.status === 404 && data.email)) {
         setGoogleEmail(data.email);
@@ -164,11 +165,11 @@ const Login: React.FC = () => {
     else { setModalError(''); setModalSuccess(''); }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, type }),
-      });
+      const res = await fetch(apiUrl('/api/auth/send-otp'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, type }),
+          });
 
       const data = await res.json().catch(() => ({}));
 
@@ -198,47 +199,64 @@ const Login: React.FC = () => {
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true); setError(''); setSuccess('');
-    try {
-      const verifyRes = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: googleEmail, otp: otpCode }),
-      });
+      e.preventDefault();
 
-      if (!verifyRes.ok) { setError(await parseError(verifyRes)); setIsLoading(false); return; }
+      const cleanOtp = otpCode.replace(/\D/g, "");
 
-      const userRes = await fetch(`${API_BASE_URL}/api/auth/google-verify-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: googleEmail, otp: otpCode }),
-      });
-
-      if (userRes.ok) {
-        const sessionData = await userRes.json();
-        if (rememberMe) localStorage.setItem('user', JSON.stringify(sessionData));
-        else {
-          sessionStorage.setItem('user', JSON.stringify(sessionData));
-          sessionStorage.setItem('sessionStart', Date.now().toString());
-        }
-        setSuccess('Login successful! Redirecting...');
-        setTimeout(() => handleRoleBasedNavigation(sessionData.role), 1500);
-      } else {
-        setError(await parseError(userRes));
+      if (cleanOtp.length !== 6) {
+        setError("Please enter the 6-digit verification code.");
+        return;
       }
-    } catch { setError('Connection error handling profile mapping.'); }
-    finally { setIsLoading(false); }
-  };
+
+      setIsLoading(true);
+      setError("");
+      setSuccess("");
+
+      try {
+        const res = await fetch(apiUrl("/api/auth/google-verify-login"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: googleEmail,
+            otp: cleanOtp,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setError(data.error || data.message || "Invalid or expired verification code");
+          return;
+        }
+
+        if (rememberMe) {
+          localStorage.setItem("user", JSON.stringify(data));
+        } else {
+          sessionStorage.setItem("user", JSON.stringify(data));
+          sessionStorage.setItem("sessionStart", Date.now().toString());
+        }
+
+        setSuccess("Login successful! Redirecting...");
+
+        setTimeout(() => {
+          handleRoleBasedNavigation(data.role);
+        }, 1000);
+
+      } catch {
+        setError("Connection error handling profile mapping.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(''); setSuccess(''); setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+      const res = await fetch(apiUrl('/api/auth/login'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -276,7 +294,7 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true); setModalError(''); setModalSuccess('');
     try {
-      const verifyRes = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
+      const verifyRes = await fetch(apiUrl('/api/auth/verify-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail, otp: otpCode }),
@@ -300,7 +318,7 @@ const Login: React.FC = () => {
 
     setIsLoading(true); setModalError(''); setModalSuccess('');
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+      const res = await fetch(apiUrl('/api/auth/reset-password'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail, newPassword: newPassword }),

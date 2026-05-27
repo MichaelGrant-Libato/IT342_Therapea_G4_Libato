@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import org.json.JSONArray
 import org.json.JSONObject
@@ -31,7 +32,10 @@ class AssessmentHistoryActivity : Activity() {
 
     // Emulator: 10.0.2.2 reaches your computer localhost.
     // Real phone: replace this with your computer LAN IP.
-    private val apiBaseUrl = "http://10.0.2.2:8083"
+    private val apiBaseUrl = BuildConfig.BASE_URL
+        .removeSuffix("/api/")
+        .removeSuffix("/api")
+        .trimEnd('/') + "/"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,7 +81,7 @@ class AssessmentHistoryActivity : Activity() {
 
         Thread {
             try {
-                val response = get("$apiBaseUrl/api/assessments/user?email=${encode(userEmail)}")
+                val response = get("${apiBaseUrl}api/assessments/user?email=${encode(userEmail)}")
                 val loaded = parseBackendAssessments(JSONObject(response))
 
                 runOnUiThread {

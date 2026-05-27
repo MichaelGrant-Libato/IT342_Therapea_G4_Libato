@@ -35,7 +35,10 @@ android {
         val agoraAppId = localProperties.getProperty("AGORA_APP_ID", "")
         buildConfigField("String", "AGORA_APP_ID", "\"$agoraAppId\"")
 
-        val baseUrl = localProperties.getProperty("BASE_URL", "http://10.0.2.2:8083/api/")
+        val baseUrl = localProperties.getProperty(
+            "BASE_URL",
+            "https://crown-ruined-idiom.ngrok-free.dev/api/"
+        )
         buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
     }
 

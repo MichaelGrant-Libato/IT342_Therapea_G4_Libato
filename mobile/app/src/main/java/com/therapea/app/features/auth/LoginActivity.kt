@@ -32,9 +32,11 @@ class LoginActivity : Activity() {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
 
-    private val apiBaseUrl = BuildConfig.BASE_URL.removeSuffix("/api/")
+    private val apiBaseUrl = BuildConfig.BASE_URL
+        .removeSuffix("/api/")
+        .removeSuffix("/api")
+        .trimEnd('/') + "/"
     private val googleRequestCode = 7100
-
     private var loginEmailForOtp = ""
     private var forgotEmail = ""
 
@@ -189,7 +191,7 @@ class LoginActivity : Activity() {
                     .put("password", password)
 
                 val request = Request.Builder()
-                    .url("$apiBaseUrl/api/auth/login")
+                    .url("${apiBaseUrl}api/auth/login")
                     .post(body.toString().toRequestBody(jsonMediaType))
                     .build()
 
@@ -244,7 +246,7 @@ class LoginActivity : Activity() {
                     val body = JSONObject().put("idToken", idToken)
 
                     val request = Request.Builder()
-                        .url("$apiBaseUrl/api/auth/google-native")
+                        .url("${apiBaseUrl}api/auth/google-native")
                         .post(body.toString().toRequestBody(jsonMediaType))
                         .build()
 
@@ -290,7 +292,7 @@ class LoginActivity : Activity() {
                     .put("type", type)
 
                 val request = Request.Builder()
-                    .url("$apiBaseUrl/api/auth/send-otp")
+                    .url("${apiBaseUrl}api/auth/send-otp")
                     .post(body.toString().toRequestBody(jsonMediaType))
                     .build()
 
@@ -329,7 +331,7 @@ class LoginActivity : Activity() {
                     .put("otp", otp)
 
                 val verifyRequest = Request.Builder()
-                    .url("$apiBaseUrl/api/auth/verify-otp")
+                    .url("${apiBaseUrl}api/auth/verify-otp")
                     .post(verifyBody.toString().toRequestBody(jsonMediaType))
                     .build()
 
@@ -348,7 +350,7 @@ class LoginActivity : Activity() {
                 val sessionBody = JSONObject().put("email", loginEmailForOtp)
 
                 val sessionRequest = Request.Builder()
-                    .url("$apiBaseUrl/api/auth/google-login")
+                    .url("${apiBaseUrl}api/auth/google-login")
                     .post(sessionBody.toString().toRequestBody(jsonMediaType))
                     .build()
 
@@ -441,7 +443,7 @@ class LoginActivity : Activity() {
                     .put("type", "FORGOT_PASSWORD")
 
                 val request = Request.Builder()
-                    .url("$apiBaseUrl/api/auth/send-otp")
+                    .url("${apiBaseUrl}api/auth/send-otp")
                     .post(body.toString().toRequestBody(jsonMediaType))
                     .build()
 
@@ -486,7 +488,7 @@ class LoginActivity : Activity() {
                     .put("otp", otp)
 
                 val request = Request.Builder()
-                    .url("$apiBaseUrl/api/auth/verify-otp")
+                    .url("${apiBaseUrl}api/auth/verify-otp")
                     .post(body.toString().toRequestBody(jsonMediaType))
                     .build()
 
@@ -526,7 +528,7 @@ class LoginActivity : Activity() {
                     .put("newPassword", newPassword)
 
                 val request = Request.Builder()
-                    .url("$apiBaseUrl/api/auth/reset-password")
+                    .url("${apiBaseUrl}api/auth/reset-password")
                     .post(body.toString().toRequestBody(jsonMediaType))
                     .build()
 

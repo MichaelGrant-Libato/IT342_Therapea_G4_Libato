@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.*
 import coil.load
 import com.google.android.flexbox.FlexboxLayout
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import com.therapea.app.features.checkout.CheckoutActivity
 import kotlinx.coroutines.*
@@ -29,6 +30,11 @@ class TherapistProfileActivity : Activity() {
 
     private var therapistId   = ""
     private var therapistData = JSONObject()
+
+    private val apiBaseUrl = BuildConfig.BASE_URL
+        .removeSuffix("/api/")
+        .removeSuffix("/api")
+        .trimEnd('/') + "/"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,7 +131,9 @@ class TherapistProfileActivity : Activity() {
         scope.launch(Dispatchers.IO) {
             try {
                 val response = client.newCall(
-                    Request.Builder().url("http://10.0.2.2:8083/api/doctors/list").build()
+                    Request.Builder()
+                        .url("${apiBaseUrl}api/doctors/list")
+                        .build()
                 ).execute()
 
                 if (!response.isSuccessful) return@launch

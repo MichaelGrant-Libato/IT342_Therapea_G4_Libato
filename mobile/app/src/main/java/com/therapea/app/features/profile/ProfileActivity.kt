@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import kotlinx.coroutines.*
 import okhttp3.MediaType.Companion.toMediaType
@@ -44,7 +45,10 @@ data class DaySchedule(
 class ProfileActivity : Activity() {
 
     companion object {
-        const val API_BASE = "http://10.0.2.2:8083"
+        private val apiBaseUrl = BuildConfig.BASE_URL
+            .removeSuffix("/api/")
+            .removeSuffix("/api")
+            .trimEnd('/') + "/"
         val DAYS = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
         private const val PICK_IMAGE_REQUEST = 8110
     }
@@ -231,7 +235,7 @@ class ProfileActivity : Activity() {
 
         scope.launch {
             try {
-                val url = "$API_BASE/api/dashboard/profile?email=${userEmail.encodeUrl()}"
+                val url = "${apiBaseUrl}api/dashboard/profile?email=${userEmail.encodeUrl()}"
                 val request = Request.Builder().url(url).get().build()
                 val response = withContext(Dispatchers.IO) { httpClient.newCall(request).execute() }
                 val body = withContext(Dispatchers.IO) { response.body?.string().orEmpty() }
@@ -420,7 +424,7 @@ class ProfileActivity : Activity() {
                 }
 
                 val request = Request.Builder()
-                    .url("$API_BASE/api/users/update")
+                    .url("${apiBaseUrl}api/users/update")
                     .patch(payload.toString().toRequestBody("application/json".toMediaType()))
                     .build()
 
@@ -477,7 +481,7 @@ class ProfileActivity : Activity() {
                 }
 
                 val request = Request.Builder()
-                    .url("$API_BASE/api/auth/change-password")
+                    .url("${apiBaseUrl}api/auth/change-password")
                     .post(payload.toString().toRequestBody("application/json".toMediaType()))
                     .build()
 
@@ -505,7 +509,7 @@ class ProfileActivity : Activity() {
                     .build()
 
                 val request = Request.Builder()
-                    .url("$API_BASE/api/users/profile-picture")
+                    .url("${apiBaseUrl}api/users/profile-picture")
                     .post(body)
                     .build()
 

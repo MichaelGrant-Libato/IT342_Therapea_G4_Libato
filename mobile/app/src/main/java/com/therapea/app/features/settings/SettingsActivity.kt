@@ -16,6 +16,7 @@ import android.widget.TextView
 import androidx.core.view.isVisible
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
@@ -27,7 +28,7 @@ import java.net.URLEncoder
 
 class SettingsActivity : Activity() {
 
-    private val apiBaseUrl = "http://10.0.2.2:8083"
+    private val apiBaseUrl = BuildConfig.BASE_URL.trimEnd('/') + "/"
     private val httpClient = OkHttpClient()
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -177,7 +178,7 @@ class SettingsActivity : Activity() {
         scope.launch {
             try {
                 val request = Request.Builder()
-                    .url("$apiBaseUrl/api/settings?email=${userEmail.encodeUrl()}")
+                    .url("${apiBaseUrl}api/settings?email=${userEmail.encodeUrl()}")
                     .get()
                     .build()
 
@@ -236,7 +237,7 @@ class SettingsActivity : Activity() {
                 }
 
                 val request = Request.Builder()
-                    .url("$apiBaseUrl/api/settings")
+                    .url("${apiBaseUrl}api/settings")
                     .put(payload.toString().toRequestBody("application/json".toMediaType()))
                     .build()
 

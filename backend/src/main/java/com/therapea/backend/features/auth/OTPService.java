@@ -4,12 +4,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
-
+import org.springframework.beans.factory.annotation.Value;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class OTPService {
+
+    @Value("${spring.mail.username}")
+    private String fromEmail;
 
     @Autowired
     private JavaMailSender mailSender;
@@ -42,6 +45,7 @@ public class OTPService {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
+        message.setFrom(fromEmail);
 
         if ("FORGOT_PASSWORD".equalsIgnoreCase(type)) {
             message.setSubject("Reset Your TheraPea Password");

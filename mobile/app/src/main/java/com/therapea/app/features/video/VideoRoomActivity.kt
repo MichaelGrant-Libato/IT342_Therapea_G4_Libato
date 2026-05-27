@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -18,8 +19,8 @@ import com.therapea.app.R
 import io.agora.rtc2.ChannelMediaOptions
 import io.agora.rtc2.Constants
 import io.agora.rtc2.IRtcEngineEventHandler
+import io.agora.rtc2.IRtcEngineEventHandler.RemoteVideoStats
 import io.agora.rtc2.RtcEngine
-import io.agora.rtc2.RtcEngineConfig
 import io.agora.rtc2.video.VideoCanvas
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,13 @@ import java.net.URLEncoder
 
 class VideoRoomActivity : Activity() {
 
-    private val apiBaseUrl = BuildConfig.BASE_URL.removeSuffix("api/").removeSuffix("/")
+    private val showDebugOverlay = false
+
+    private val apiBaseUrl = BuildConfig.BASE_URL
+        .removeSuffix("/api/")
+        .removeSuffix("/api")
+        .trimEnd('/') + "/"
+
     private val fallbackAppId = BuildConfig.AGORA_APP_ID
     private val httpClient = OkHttpClient()
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -46,11 +53,15 @@ class VideoRoomActivity : Activity() {
     )
 
     private var rtcEngine: RtcEngine? = null
+
     private var token: String? = null
     private var appId = ""
-    private var channelName = "therapy-session-1"
+    private var appointmentId = "default"
+    private var channelName = "therapy-session-default"
+
     private var localUid = 0
     private var remoteUid: Int? = null
+
     private var tokenReady = false
     private var joined = false
     private var leaving = false
@@ -60,41 +71,90 @@ class VideoRoomActivity : Activity() {
 
     private lateinit var lobbyOverlay: View
     private lateinit var callLayer: View
+
     private lateinit var remoteVideoContainer: FrameLayout
     private lateinit var localVideoContainer: FrameLayout
+
     private lateinit var tvWaiting: TextView
     private lateinit var tvLocalCameraOff: TextView
     private lateinit var tvLobbyStatus: TextView
     private lateinit var tvCallStatus: TextView
+    private lateinit var tvDebug: TextView
+
     private lateinit var btnJoinCall: MaterialButton
     private lateinit var btnMic: MaterialButton
     private lateinit var btnCamera: MaterialButton
     private lateinit var btnEndCall: MaterialButton
 
+    private fun debug(msg: String) {
+        android.util.Log.d("AGORA_DEBUG", msg)
+
+        if (!showDebugOverlay) return
+
+        runOnUiThread {
+            tvDebug.text = msg
+            tvDebug.visibility = View.VISIBLE
+        }
+    }
+
     private val rtcHandler = object : IRtcEngineEventHandler() {
 
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
-            android.util.Log.d("AGORA_DEBUG", "✅ Joined! uid=$uid channel=$channel")
+            debug("JOINED channel=$channel uid=$uid")
+
             runOnUiThread {
                 joined = true
-                localUid = uid
                 tvCallStatus.text = "Connected"
                 tvWaiting.text = "Waiting for the other person to join..."
                 tvWaiting.isVisible = true
+
+                rtcEngine?.muteAllRemoteVideoStreams(false)
+                rtcEngine?.muteAllRemoteAudioStreams(false)
+
+                bringCallOverlaysToFront()
             }
         }
 
         override fun onUserJoined(uid: Int, elapsed: Int) {
-            android.util.Log.d("AGORA_DEBUG", "👤 Remote user joined uid=$uid")
+            debug("USER JOINED uid=$uid")
+
             runOnUiThread {
-                remoteUid = uid
+                rtcEngine?.muteRemoteVideoStream(uid, false)
+                rtcEngine?.muteRemoteAudioStream(uid, false)
                 setupRemoteVideo(uid)
-                tvWaiting.isVisible = false
-                tvCallStatus.text = "In session"
+            }
+        }
+
+        override fun onFirstRemoteVideoFrame(uid: Int, width: Int, height: Int, elapsed: Int) {
+            debug("FIRST FRAME uid=$uid ${width}x${height}")
+
+            runOnUiThread {
+                setupRemoteVideo(uid)
+            }
+        }
+
+        override fun onRemoteVideoStateChanged(uid: Int, state: Int, reason: Int, elapsed: Int) {
+            debug("REMOTE STATE uid=$uid state=$state reason=$reason")
+
+            runOnUiThread {
+                when (state) {
+                    Constants.REMOTE_VIDEO_STATE_DECODING -> setupRemoteVideo(uid)
+                    Constants.REMOTE_VIDEO_STATE_STARTING -> setupRemoteVideo(uid)
+                    Constants.REMOTE_VIDEO_STATE_FROZEN -> debug("REMOTE FROZEN uid=$uid reason=$reason")
+                    Constants.REMOTE_VIDEO_STATE_FAILED -> debug("REMOTE FAILED uid=$uid reason=$reason")
+                }
+            }
+        }
+
+        override fun onRemoteVideoStats(stats: RemoteVideoStats?) {
+            stats?.let {
+                debug("STATS uid=${it.uid} bitrate=${it.receivedBitrate} ${it.width}x${it.height}")
             }
         }
 
         override fun onUserOffline(uid: Int, reason: Int) {
+            debug("USER OFFLINE uid=$uid reason=$reason")
+
             runOnUiThread {
                 if (remoteUid == uid) {
                     remoteUid = null
@@ -102,32 +162,28 @@ class VideoRoomActivity : Activity() {
                     tvWaiting.text = "The other person left the session."
                     tvWaiting.isVisible = true
                     tvCallStatus.text = "Waiting"
+                    bringCallOverlaysToFront()
                 }
             }
         }
 
         override fun onConnectionStateChanged(state: Int, reason: Int) {
-            android.util.Log.d("AGORA_DEBUG", "🔌 Connection state=$state reason=$reason")
-            // state: 1=Disconnected, 2=Connecting, 3=Connected, 4=Reconnecting, 5=Failed
-            // reason: 8=InvalidToken, 9=TokenExpired, 10=RejectedByServer
+            debug("CONNECTION state=$state reason=$reason")
+
             runOnUiThread {
-                when (state) {
-                    5 -> showDialog(
-                        "Connection Failed",
-                        "Could not connect to the session. Reason code: $reason. Please leave and try again."
-                    )
+                if (state == Constants.CONNECTION_STATE_FAILED) {
+                    showDialog("Connection Failed", "Could not connect. Reason: $reason")
                 }
             }
         }
 
         override fun onError(err: Int) {
-            android.util.Log.e("AGORA_DEBUG", "❌ Agora error: $err")
-            runOnUiThread {
-                showDialog("Video connection issue", "The call could not continue. Error code: $err")
-            }
+            debug("ERROR err=$err")
         }
 
         override fun onRequestToken() {
+            debug("TOKEN EXPIRED")
+
             runOnUiThread {
                 showDialog("Session expired", "The video token expired. Please leave and rejoin.")
             }
@@ -139,7 +195,6 @@ class VideoRoomActivity : Activity() {
         setContentView(R.layout.activity_video_room)
 
         channelName = resolveChannelName()
-        android.util.Log.d("AGORA_DEBUG", "📌 Initial channelName=$channelName")
 
         bindViews()
         setupInitialUi()
@@ -150,12 +205,16 @@ class VideoRoomActivity : Activity() {
     private fun bindViews() {
         lobbyOverlay = findViewById(R.id.lobbyOverlay)
         callLayer = findViewById(R.id.callLayer)
+
         remoteVideoContainer = findViewById(R.id.remoteVideoContainer)
         localVideoContainer = findViewById(R.id.localVideoContainer)
+
         tvWaiting = findViewById(R.id.tvWaiting)
         tvLocalCameraOff = findViewById(R.id.tvLocalCameraOff)
         tvLobbyStatus = findViewById(R.id.tvLobbyStatus)
         tvCallStatus = findViewById(R.id.tvCallStatus)
+        tvDebug = findViewById(R.id.tvDebug)
+
         btnJoinCall = findViewById(R.id.btnJoinCall)
         btnMic = findViewById(R.id.btnMic)
         btnCamera = findViewById(R.id.btnCamera)
@@ -165,10 +224,14 @@ class VideoRoomActivity : Activity() {
     private fun setupInitialUi() {
         callLayer.isVisible = false
         lobbyOverlay.isVisible = true
+
         btnJoinCall.isEnabled = false
         btnJoinCall.text = "Connecting..."
+
         tvLobbyStatus.text = "Preparing the secure therapy room..."
         tvWaiting.text = "Waiting for the other person to join..."
+        tvDebug.visibility = View.GONE
+
         updateControls()
     }
 
@@ -180,48 +243,98 @@ class VideoRoomActivity : Activity() {
     }
 
     private fun resolveChannelName(): String {
-        val appointmentId = intent.getStringExtra("appointmentId")
-        return intent.getStringExtra("channelName")
-            ?: intent.getStringExtra("channel")
-            ?: if (!appointmentId.isNullOrBlank()) "therapy-session-$appointmentId" else "therapy-session-1"
+        appointmentId = intent.getStringExtra("appointmentId")
+            ?: intent.getStringExtra("id")
+                    ?: "default"
+
+        return "therapy-session-$appointmentId"
+    }
+
+    private fun stableMobileUid(): Int {
+        val prefs = getSharedPreferences("TheraPeaSession", MODE_PRIVATE)
+
+        val savedUid = prefs.getInt("agora_mobile_uid", -1)
+        if (savedUid in 40000..63999) {
+            return savedUid
+        }
+
+        val userData = prefs.getString("user_data", "") ?: ""
+
+        val androidId = Settings.Secure.getString(
+            contentResolver,
+            Settings.Secure.ANDROID_ID
+        ) ?: ""
+
+        val seed = userData.ifBlank { androidId }.ifBlank { "therapea-mobile" }
+        val bucket = Math.floorMod(("android:$seed").hashCode(), 24000)
+
+        val uid = 40000 + bucket
+
+        prefs.edit()
+            .putInt("agora_mobile_uid", uid)
+            .apply()
+
+        return uid
     }
 
     private fun fetchVideoToken() {
         tokenReady = false
+        token = null
+
         btnJoinCall.isEnabled = false
         btnJoinCall.text = "Connecting..."
+        tvLobbyStatus.text = "Preparing the secure therapy room..."
 
         scope.launch {
             try {
-                val encodedChannel = URLEncoder.encode(channelName, "UTF-8")
+                localUid = stableMobileUid()
+
+                val encodedAppointmentId = URLEncoder.encode(appointmentId, "UTF-8")
+
                 val request = Request.Builder()
-                    .url("$apiBaseUrl/api/video/token?channelName=$encodedChannel")
+                    .url("${apiBaseUrl}api/video/token?appointmentId=$encodedAppointmentId&uid=$localUid")
                     .get()
                     .build()
 
-                val response = withContext(Dispatchers.IO) { httpClient.newCall(request).execute() }
-                val body = withContext(Dispatchers.IO) { response.body?.string().orEmpty() }
+                val response = withContext(Dispatchers.IO) {
+                    httpClient.newCall(request).execute()
+                }
 
-                android.util.Log.d("AGORA_DEBUG", "HTTP status: ${response.code}")
-                android.util.Log.d("AGORA_DEBUG", "Token server response: $body")
+                val body = withContext(Dispatchers.IO) {
+                    response.body?.string().orEmpty()
+                }
 
-                if (!response.isSuccessful) throw IllegalStateException("Token request failed: HTTP ${response.code}")
+                android.util.Log.d("AGORA_DEBUG", "Token HTTP status=${response.code}")
+                android.util.Log.d("AGORA_DEBUG", "Token response=$body")
+
+                if (!response.isSuccessful) {
+                    throw IllegalStateException("Token request failed: HTTP ${response.code}")
+                }
 
                 val json = JSONObject(body)
-                token = json.optString("token", json.optString("rtcToken", "")).ifBlank { null }
-                appId = json.optString("appId", "").ifBlank { fallbackAppId }
-                localUid = json.optInt("uid", 0)
 
-                // IMPORTANT: sync channelName from server response so token matches exactly
-                val serverChannelName = json.optString("channelName", "").ifBlank { null }
+                token = json.optString("token", json.optString("rtcToken", ""))
+                    .ifBlank { null }
+
+                appId = json.optString("appId", "")
+                    .ifBlank { fallbackAppId }
+
+                localUid = json.optInt("uid", localUid)
+
+                val serverChannelName = json.optString("channelName", "")
+                    .ifBlank { null }
+
                 if (serverChannelName != null) {
-                    android.util.Log.d("AGORA_DEBUG", "🔄 Syncing channelName from server: $serverChannelName (was: $channelName)")
                     channelName = serverChannelName
                 }
 
-                android.util.Log.d("AGORA_DEBUG", "Parsed → token=${token?.take(20)}... appId=$appId uid=$localUid channel=$channelName")
+                android.util.Log.d(
+                    "AGORA_DEBUG",
+                    "Parsed token uid=$localUid channel=$channelName appId=$appId"
+                )
 
                 if (token.isNullOrBlank() || appId.isBlank()) {
+                    tokenReady = false
                     tvLobbyStatus.text = "Video service is not configured yet."
                     btnJoinCall.text = "Unavailable"
                     btnJoinCall.isEnabled = false
@@ -232,30 +345,24 @@ class VideoRoomActivity : Activity() {
                 tvLobbyStatus.text = "Tap below to enter the session."
                 btnJoinCall.text = "Join Call"
                 btnJoinCall.isEnabled = true
+                btnJoinCall.setOnClickListener { prepareToJoinCall() }
 
             } catch (e: Exception) {
-                android.util.Log.e("AGORA_DEBUG", "❌ fetchVideoToken failed: ${e.message}")
-                appId = fallbackAppId
+                android.util.Log.e("AGORA_DEBUG", "fetchVideoToken failed: ${e.message}")
+
+                tokenReady = false
                 token = null
 
-                if (appId.isBlank()) {
-                    tvLobbyStatus.text = "Could not connect to the video server."
-                    btnJoinCall.text = "Retry"
-                    btnJoinCall.isEnabled = true
-                    btnJoinCall.setOnClickListener { fetchVideoToken() }
-                } else {
-                    tokenReady = true
-                    tvLobbyStatus.text = "Token server unavailable. Joining with app fallback."
-                    btnJoinCall.text = "Join Call"
-                    btnJoinCall.isEnabled = true
-                    btnJoinCall.setOnClickListener { prepareToJoinCall() }
-                }
+                tvLobbyStatus.text = "Could not connect to the video server."
+                btnJoinCall.text = "Retry"
+                btnJoinCall.isEnabled = true
+                btnJoinCall.setOnClickListener { fetchVideoToken() }
             }
         }
     }
 
     private fun prepareToJoinCall() {
-        if (!tokenReady || appId.isBlank()) {
+        if (!tokenReady || token.isNullOrBlank() || appId.isBlank()) {
             showDialog("Room not ready", "The video room is still connecting. Please try again.")
             return
         }
@@ -269,7 +376,9 @@ class VideoRoomActivity : Activity() {
     }
 
     private fun joinCall() {
-        android.util.Log.d("AGORA_DEBUG", "joinCall → appId='$appId' token=${token?.take(10)} channel=$channelName")
+        if (joined || leaving) return
+
+        android.util.Log.d("AGORA_DEBUG", "joinCall appId=$appId uid=$localUid channel=$channelName")
 
         scope.launch(Dispatchers.IO) {
             try {
@@ -277,36 +386,47 @@ class VideoRoomActivity : Activity() {
 
                 withContext(Dispatchers.Main) {
                     rtcEngine = engine
+
                     lobbyOverlay.isVisible = false
                     callLayer.isVisible = true
                     tvCallStatus.text = "Joining..."
+                    tvDebug.visibility = View.GONE
+
+                    rtcEngine?.setEnableSpeakerphone(true)
+                    rtcEngine?.enableVideo()
+                    rtcEngine?.enableAudio()
+                    rtcEngine?.muteAllRemoteVideoStreams(false)
+                    rtcEngine?.muteAllRemoteAudioStreams(false)
 
                     setupLocalVideo()
-                    rtcEngine?.setEnableSpeakerphone(true)
 
                     val mediaOptions = ChannelMediaOptions().apply {
                         channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
+                        clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
                         publishCameraTrack = true
                         publishMicrophoneTrack = true
                         autoSubscribeAudio = true
                         autoSubscribeVideo = true
                     }
 
-                    android.util.Log.d("AGORA_DEBUG", "🚀 joinChannel → token=${token?.take(20)}... channel=$channelName uid=$localUid appId=$appId")
-                    rtcEngine?.joinChannel(token, channelName, localUid, mediaOptions)
                     rtcEngine?.startPreview()
+                    rtcEngine?.joinChannel(token, channelName, localUid, mediaOptions)
+
+                    bringCallOverlaysToFront()
+
+                    android.util.Log.d(
+                        "AGORA_DEBUG",
+                        "joinChannel called uid=$localUid channel=$channelName"
+                    )
                 }
+
             } catch (e: Exception) {
-                android.util.Log.e("AGORA_DEBUG", "❌ Exception type: ${e::class.java.name}")
-                android.util.Log.e("AGORA_DEBUG", "❌ Message: ${e.message}")
-                android.util.Log.e("AGORA_DEBUG", "❌ Cause: ${e.cause}")
+                android.util.Log.e("AGORA_DEBUG", "joinCall failed: ${e.message}")
+
                 withContext(Dispatchers.Main) {
                     callLayer.isVisible = false
                     lobbyOverlay.isVisible = true
-                    showDialog(
-                        title = "Could not start video",
-                        message = "Error: ${e.message}"
-                    )
+                    showDialog("Could not start video", "Error: ${e.message}")
                 }
             }
         }
@@ -322,34 +442,91 @@ class VideoRoomActivity : Activity() {
     private fun setupLocalVideo() {
         localVideoContainer.removeAllViews()
 
-        val textureView = android.view.TextureView(baseContext)
+        val surfaceView = RtcEngine.CreateRendererView(this@VideoRoomActivity)
+
+        // Local preview must appear above the remote full-screen SurfaceView.
+        surfaceView.setZOrderMediaOverlay(true)
 
         localVideoContainer.addView(
-            textureView,
+            surfaceView,
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
         )
 
-        rtcEngine?.setupLocalVideo(VideoCanvas(textureView, VideoCanvas.RENDER_MODE_HIDDEN, localUid))
+        rtcEngine?.setupLocalVideo(
+            VideoCanvas(
+                surfaceView,
+                VideoCanvas.RENDER_MODE_HIDDEN,
+                localUid
+            )
+        )
+
+        localVideoContainer.visibility = View.VISIBLE
         tvLocalCameraOff.visibility = View.GONE
+
+        bringCallOverlaysToFront()
     }
 
     private fun setupRemoteVideo(uid: Int) {
-        remoteVideoContainer.removeAllViews()
+        if (remoteUid == uid && remoteVideoContainer.childCount > 0) {
+            debug("GUARD duplicate setupRemoteVideo uid=$uid")
 
-        val textureView = android.view.TextureView(baseContext)
+            runOnUiThread {
+                tvWaiting.isVisible = false
+                tvCallStatus.text = "In session"
+                bringCallOverlaysToFront()
+            }
 
-        remoteVideoContainer.addView(
-            textureView,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
+            return
+        }
+
+        runOnUiThread {
+            debug("CREATING remote SurfaceView uid=$uid")
+
+            remoteVideoContainer.removeAllViews()
+
+            val surfaceView = RtcEngine.CreateRendererView(this@VideoRoomActivity)
+            surfaceView.setZOrderMediaOverlay(false)
+
+            remoteVideoContainer.addView(
+                surfaceView,
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
             )
-        )
 
-        rtcEngine?.setupRemoteVideo(VideoCanvas(textureView, VideoCanvas.RENDER_MODE_HIDDEN, uid))
+            rtcEngine?.setupRemoteVideo(
+                VideoCanvas(
+                    surfaceView,
+                    VideoCanvas.RENDER_MODE_HIDDEN,
+                    uid
+                )
+            )
+
+            rtcEngine?.muteRemoteVideoStream(uid, false)
+            rtcEngine?.muteRemoteAudioStream(uid, false)
+
+            remoteUid = uid
+            tvWaiting.isVisible = false
+            tvCallStatus.text = "In session"
+
+            bringCallOverlaysToFront()
+
+            debug("setupRemoteVideo DONE uid=$uid")
+        }
+    }
+
+    private fun bringCallOverlaysToFront() {
+        findViewById<View>(R.id.localPreviewCard).bringToFront()
+        findViewById<View>(R.id.callControls).bringToFront()
+        tvCallStatus.bringToFront()
+
+        if (showDebugOverlay) {
+            tvDebug.bringToFront()
+        }
     }
 
     private fun toggleMic() {
@@ -360,9 +537,18 @@ class VideoRoomActivity : Activity() {
 
     private fun toggleCamera() {
         camOn = !camOn
+
         rtcEngine?.muteLocalVideoStream(!camOn)
         localVideoContainer.isVisible = camOn
         tvLocalCameraOff.isVisible = !camOn
+
+        if (camOn) {
+            setupLocalVideo()
+        } else {
+            localVideoContainer.removeAllViews()
+        }
+
+        bringCallOverlaysToFront()
         updateControls()
     }
 
@@ -370,13 +556,19 @@ class VideoRoomActivity : Activity() {
         btnMic.text = if (micOn) "Mic On" else "Muted"
         btnCamera.text = if (camOn) "Cam On" else "Cam Off"
 
-        btnMic.backgroundTintList = ColorStateList.valueOf(Color.parseColor(if (micOn) "#374151" else "#EF4444"))
-        btnCamera.backgroundTintList = ColorStateList.valueOf(Color.parseColor(if (camOn) "#374151" else "#EF4444"))
-        btnEndCall.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#EF4444"))
+        btnMic.backgroundTintList =
+            ColorStateList.valueOf(Color.parseColor(if (micOn) "#374151" else "#EF4444"))
+
+        btnCamera.backgroundTintList =
+            ColorStateList.valueOf(Color.parseColor(if (camOn) "#374151" else "#EF4444"))
+
+        btnEndCall.backgroundTintList =
+            ColorStateList.valueOf(Color.parseColor("#EF4444"))
     }
 
     private fun leaveCallAndFinish() {
         if (leaving) return
+
         leaving = true
         leaveCall()
         finish()
@@ -386,11 +578,18 @@ class VideoRoomActivity : Activity() {
         try {
             rtcEngine?.stopPreview()
             rtcEngine?.leaveChannel()
+
             localVideoContainer.removeAllViews()
             remoteVideoContainer.removeAllViews()
-            rtcEngine?.let { RtcEngine.destroy() }
+
+            rtcEngine?.let {
+                RtcEngine.destroy()
+            }
+
             rtcEngine = null
             joined = false
+            remoteUid = null
+
         } catch (_: Exception) {
             rtcEngine = null
         }
@@ -408,8 +607,12 @@ class VideoRoomActivity : Activity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
         if (requestCode == permissionRequestCode) {
-            val granted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            val granted =
+                grantResults.isNotEmpty() &&
+                        grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+
             if (granted) {
                 joinCall()
             } else {
@@ -417,7 +620,9 @@ class VideoRoomActivity : Activity() {
                     title = "Hardware Blocked",
                     message = "Camera and microphone access are required for video sessions.",
                     positiveText = "Try Again",
-                    onPositive = { requestPermissions(requiredPermissions, permissionRequestCode) }
+                    onPositive = {
+                        requestPermissions(requiredPermissions, permissionRequestCode)
+                    }
                 )
             }
         }
@@ -429,6 +634,8 @@ class VideoRoomActivity : Activity() {
         positiveText: String = "Okay",
         onPositive: (() -> Unit)? = null
     ) {
+        if (isFinishing || isDestroyed) return
+
         AlertDialog.Builder(this)
             .setTitle(title)
             .setMessage(message)

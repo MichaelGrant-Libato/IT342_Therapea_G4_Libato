@@ -215,7 +215,8 @@
                     amount:      pricing.deposit, 
                     description: `Therapy Booking: ${therapist.name}`, 
                     email:       user.email,
-                    source:      "web"         
+                    source:      "web",
+                    returnBaseUrl:  window.location.origin  
                     })
                 });
 

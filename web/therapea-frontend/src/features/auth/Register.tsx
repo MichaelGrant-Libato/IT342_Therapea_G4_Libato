@@ -5,7 +5,12 @@ import "./Register.css";
 const Register: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8083';
+  const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || 'http://localhost:8083';
+  const API_ORIGIN = new URL(API_BASE_URL).origin;
+
+  const apiUrl = (path: string) => {
+    return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  };
 
   // ─── Standard Registration State ───
   const [currentStep, setCurrentStep] = useState(1);
@@ -104,7 +109,8 @@ const Register: React.FC = () => {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== API_BASE_URL) return;
+      if (event.origin !== API_ORIGIN) return;
+      if (!event.data || typeof event.data !== 'object') return;
       const { type, email, name } = event.data;
 
       if (type === 'error') { setError('Google sign-up failed. Please try again.'); return; }
@@ -126,25 +132,40 @@ const Register: React.FC = () => {
   }, [navigate, API_BASE_URL]);
 
   const handleVerifyOtpAndRegister = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true); setError('');
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: googleUserInfo?.email, otp: otpCode }),
-      });
+  e.preventDefault();
 
-      if (res.ok) {
-        setShowOtpVerification(false);
-        setShowGoogleFlow(true); 
-      } else {
-        setError(await parseError(res));
-      }
-    } catch { 
-      setError('We are having trouble connecting. Please check your internet and try again.'); 
-    } finally { setIsLoading(false); }
-  };
+  const cleanOtp = otpCode.replace(/\D/g, "");
+
+  if (cleanOtp.length !== 6) {
+    setError("Please enter the 6-digit verification code.");
+    return;
+  }
+
+  setIsLoading(true);
+  setError('');
+
+  try {
+    const res = await fetch(apiUrl('/api/auth/verify-otp'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: googleUserInfo?.email,
+        otp: cleanOtp,
+      }),
+    });
+
+    if (res.ok) {
+      setShowOtpVerification(false);
+      setShowGoogleFlow(true);
+    } else {
+      setError(await parseError(res));
+    }
+  } catch {
+    setError('We are having trouble connecting. Please check your internet and try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleCompleteGoogleProfile = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -8,6 +8,7 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.*
+import com.therapea.app.BuildConfig
 import com.therapea.app.R
 import com.therapea.app.features.emergencyMap.EmergencyMapActivity
 import com.therapea.app.features.map.FindTherapistActivity
@@ -40,7 +41,7 @@ class AssessmentResultActivity : Activity() {
 
     // Emulator: 10.0.2.2 reaches your computer localhost.
     // Real phone: replace with your computer LAN IP.
-    private val apiBaseUrl = "http://10.0.2.2:8083"
+    private val apiBaseUrl = BuildConfig.BASE_URL.trimEnd('/') + "/"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -119,7 +120,7 @@ class AssessmentResultActivity : Activity() {
 
         Thread {
             try {
-                val response = get("$apiBaseUrl/api/assessments/user?email=${encode(userEmail)}")
+                val response = get("${apiBaseUrl}api/user?email=${encode(userEmail)}")
                 val array = JSONObject(response).optJSONArray("assessments") ?: JSONArray()
 
                 var found: AssessmentRecord? = null
@@ -255,7 +256,7 @@ class AssessmentResultActivity : Activity() {
 
         Thread {
             try {
-                patch("$apiBaseUrl/api/assessments/${r.id}/review")
+                patch("${apiBaseUrl}api/assessments/${r.id}/review")
 
                 runOnUiThread {
                     isProcessing = false
@@ -280,7 +281,7 @@ class AssessmentResultActivity : Activity() {
 
         Thread {
             try {
-                delete("$apiBaseUrl/api/assessments/${r.id}")
+                delete("${apiBaseUrl}api/assessments/${r.id}")
             } catch (_: Exception) {
             }
 

@@ -18,6 +18,8 @@ public class PaymentController {
     public ResponseEntity<?> createLink(@RequestBody PaymentRequestDTO request) {
         try {
             System.out.println("Generating Payment Link for: " + request.getEmail());
+            System.out.println("Payment source: " + request.getSource());
+            System.out.println("Return base URL: " + request.getReturnBaseUrl());
 
             String checkoutUrl = paymentService.createPaymentLink(request);
 
@@ -26,7 +28,10 @@ public class PaymentController {
                     "checkoutUrl", checkoutUrl,
                     "message", "Payment link generated successfully."
             ));
+
         } catch (Exception e) {
+            e.printStackTrace();
+
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "message", "Payment Gateway Error: " + e.getMessage()
